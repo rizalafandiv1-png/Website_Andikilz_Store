@@ -60,14 +60,15 @@ export default function QrisPayment() {
         </div>
 
         <div className="bg-white p-4 rounded-2xl mb-8 max-w-sm mx-auto flex flex-col items-center justify-center shadow-inner">
-          {/* QRIS Image */}
+          {/* QRIS Image from Google Drive */}
           <img 
-            src="/qris.png" 
+            src="https://lh3.googleusercontent.com/d/1hlB7tOP8uZydM8LBiYNNZfX8LTQ8hcJp" 
             alt="Kode Pembayaran QRIS" 
             className="w-full h-auto rounded-xl"
+            referrerPolicy="no-referrer"
             onError={(e) => {
-              // Fallback if image is missing
-              e.currentTarget.src = "https://placehold.co/400x600/white/black?text=QRIS+Andikilz+Store\\nLetakkan+qris.png+di+folder+public";
+              // Fallback if image fails to load
+              e.currentTarget.src = "https://placehold.co/400x600/white/black?text=QRIS+Andikilz+Store\\nSilakan+hubungi+admin";
             }}
           />
         </div>
