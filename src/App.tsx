@@ -6,6 +6,7 @@ import CategorySelection from "./pages/CategorySelection";
 import CategoryDetail from "./pages/CategoryDetail";
 import Checkout from "./pages/Checkout";
 import QrisPayment from "./pages/QrisPayment";
+import VoucherTopup from "./pages/VoucherTopup";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:productId" element={<CategorySelection />} />
           <Route path="/products/:productId/:categoryId" element={<CategoryDetail />} />
+          <Route path="/voucher/:productId" element={<VoucherTopup />} />
           <Route path="/checkout/:productId/:categoryId" element={<Checkout />} />
           <Route path="/payment/qris/:productId/:categoryId" element={<QrisPayment />} />
         </Route>

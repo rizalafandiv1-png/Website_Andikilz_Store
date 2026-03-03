@@ -19,7 +19,8 @@ export default function Checkout() {
 
   const handleContinue = () => {
     if (selectedMethod === "qris") {
-      navigate(`/payment/qris/${product.id}/${category.id}`);
+      const searchParams = new URLSearchParams(window.location.search);
+      navigate(`/payment/qris/${product.id}/${category.id}?${searchParams.toString()}`);
     }
   };
 

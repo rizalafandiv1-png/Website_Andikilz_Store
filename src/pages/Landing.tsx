@@ -1,7 +1,8 @@
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Zap, Shield, MonitorPlay, CreditCard, Mail } from "lucide-react";
+import { productsConfig } from "../lib/products";
+import { Zap, Shield, MonitorPlay, CreditCard, Mail, ArrowRight, Gamepad2, Flame } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -25,7 +26,7 @@ export default function Landing() {
             </h1>
             
             <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Get individual premium accounts for the world's best digital tools and entertainment platforms at a fraction of the retail price.
+              Get individual premium accounts and game vouchers for the world's best digital tools and entertainment platforms at a fraction of the retail price.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -39,6 +40,47 @@ export default function Landing() {
               <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-fuchsia-400" /> Secure Checkout</div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Featured Games */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight mb-4">Featured Games</h2>
+              <p className="text-zinc-400">Top up your favorite games instantly.</p>
+            </div>
+            <Link to="/products" className="text-violet-400 hover:text-violet-300 font-medium flex items-center gap-2 transition-colors">
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {productsConfig.filter(p => p.type === "voucher").slice(0, 4).map((game, i) => (
+              <motion.div
+                key={game.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+              >
+                <Link 
+                  to={`/voucher/${game.id}`}
+                  className="group block p-6 rounded-3xl bg-zinc-900/50 border border-white/5 hover:border-violet-500/30 transition-all text-center"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    {game.id === "mobile-legends" && <Gamepad2 className="w-8 h-8 text-violet-400" />}
+                    {game.id === "free-fire" && <Flame className="w-8 h-8 text-amber-400" />}
+                    {game.id === "valorant" && <Gamepad2 className="w-8 h-8 text-rose-400" />}
+                    {game.id === "pubg-mobile" && <Gamepad2 className="w-8 h-8 text-emerald-400" />}
+                  </div>
+                  <h3 className="font-bold text-lg">{game.name}</h3>
+                  <p className="text-xs text-zinc-500 mt-1">Instant Top Up</p>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 

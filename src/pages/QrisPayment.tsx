@@ -14,13 +14,17 @@ export default function QrisPayment() {
     return <Navigate to="/products" />;
   }
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const userId = searchParams.get("userId");
+  const zoneId = searchParams.get("zoneId");
+
   // Convert USD to IDR for QRIS (approximate for display)
   const priceIDR = (category.price * 15500).toLocaleString('id-ID');
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-24">
       <div className="mb-8">
-        <Link to={`/checkout/${product.id}/${category.id}`} className="text-sm text-zinc-500 hover:text-white transition-colors mb-4 inline-flex items-center gap-2">
+        <Link to={`/checkout/${product.id}/${category.id}${window.location.search}`} className="text-sm text-zinc-500 hover:text-white transition-colors mb-4 inline-flex items-center gap-2">
           <ArrowLeft className="w-4 h-4" /> Back to Checkout
         </Link>
       </div>
@@ -44,7 +48,7 @@ export default function QrisPayment() {
             className="w-full h-auto rounded-xl"
             onError={(e) => {
               // Fallback if image is missing
-              e.currentTarget.src = "https://placehold.co/400x400/white/black?text=QRIS+Image+Not+Found\\nPlace+qris.png+in+public+folder";
+              e.currentTarget.src = "blob:https://web.whatsapp.com/b4b031bb-7839-477e-8a1f-b9f762c26041";
             }}
           />
         </div>
@@ -58,6 +62,15 @@ export default function QrisPayment() {
             </div>
           </div>
           
+          {(userId || zoneId) && (
+            <div className="flex justify-between items-center p-5 rounded-2xl bg-zinc-900/50 border border-white/5">
+              <span className="text-zinc-400 font-medium">Target ID</span>
+              <span className="font-bold text-white">
+                {userId}{zoneId ? ` (${zoneId})` : ""}
+              </span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center p-5 rounded-2xl bg-zinc-900/50 border border-white/5">
             <span className="text-zinc-400 font-medium">Order ID</span>
             <span className="font-mono text-sm text-white bg-zinc-800 px-3 py-1 rounded-lg">
@@ -87,7 +100,7 @@ export default function QrisPayment() {
             asChild
             className="flex-1 rounded-xl h-14 bg-[#25D366] hover:bg-[#1EBE5D] text-white text-base font-medium"
           >
-            <a href={`https://wa.me/1234567890?text=Hello,%20I%20have%20made%20a%20payment%20for%20${product.name}%20-%20${category.name}.`} target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/1234567890?text=Hello,%20I%20have%20made%20a%20payment%20for%20${product.name}%20-%20${category.name}${userId ? `%20(ID:%20${userId}${zoneId ? `%20Zone:%20${zoneId}` : ""})` : ""}.`} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="w-5 h-5 mr-2" />
               Confirm via WhatsApp
             </a>
