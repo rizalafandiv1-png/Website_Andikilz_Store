@@ -28,15 +28,15 @@ export default function Checkout() {
     <div className="max-w-4xl mx-auto px-6 py-24">
       <div className="mb-8">
         <Link to={`/products/${product.id}/${category.id}`} className="text-sm text-zinc-500 hover:text-white transition-colors mb-4 inline-block">
-          &larr; Back to {category.name}
+          &larr; Kembali ke {category.name}
         </Link>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Checkout</h1>
-        <p className="text-zinc-400">Select your preferred payment method.</p>
+        <p className="text-zinc-400">Pilih metode pembayaran yang Anda inginkan.</p>
       </div>
 
       <div className="grid md:grid-cols-5 gap-8">
         <div className="md:col-span-3 space-y-6">
-          <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+          <h2 className="text-xl font-semibold mb-4">Metode Pembayaran</h2>
           
           <div className="space-y-4">
             <button
@@ -53,7 +53,7 @@ export default function Checkout() {
                 </div>
                 <div className="text-left">
                   <div className="font-semibold text-lg">QRIS</div>
-                  <div className="text-sm text-zinc-500">Instant payment via E-Wallet/Bank</div>
+                  <div className="text-sm text-zinc-500">Pembayaran instan via E-Wallet/Bank</div>
                 </div>
               </div>
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
@@ -72,8 +72,8 @@ export default function Checkout() {
                   <CreditCard className="w-6 h-6" />
                 </div>
                 <div className="text-left">
-                  <div className="font-semibold text-lg text-zinc-400">Credit Card (Stripe)</div>
-                  <div className="text-sm text-zinc-600">Coming soon</div>
+                  <div className="font-semibold text-lg text-zinc-400">Kartu Kredit (Stripe)</div>
+                  <div className="text-sm text-zinc-600">Segera hadir</div>
                 </div>
               </div>
             </button>
@@ -82,7 +82,7 @@ export default function Checkout() {
 
         <div className="md:col-span-2 space-y-6">
           <div className="p-6 rounded-3xl bg-[#0a0a0a] border border-white/5 sticky top-24">
-            <h2 className="text-lg font-semibold mb-6">Order Summary</h2>
+            <h2 className="text-lg font-semibold mb-6">Ringkasan Pesanan</h2>
             
             <div className="space-y-4 mb-6">
               <div className="flex justify-between items-start">
@@ -90,13 +90,13 @@ export default function Checkout() {
                   <div className="font-medium text-zinc-200">{product.name}</div>
                   <div className="text-sm text-zinc-500">{category.name}</div>
                 </div>
-                <span className="font-medium">${category.price}</span>
+                <span className="font-medium">Rp {category.price.toLocaleString('id-ID')}</span>
               </div>
             </div>
             
             <div className="pt-4 border-t border-white/5 flex justify-between items-center mb-8">
               <span className="font-semibold text-zinc-400">Total</span>
-              <span className="text-2xl font-bold text-white">${category.price}</span>
+              <span className="text-2xl font-bold text-white">Rp {category.price.toLocaleString('id-ID')}</span>
             </div>
 
             <Button 
@@ -105,7 +105,7 @@ export default function Checkout() {
               size="lg" 
               className="w-full rounded-xl h-14 text-base font-medium bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500"
             >
-              Continue to Payment
+              Lanjutkan ke Pembayaran
             </Button>
           </div>
         </div>

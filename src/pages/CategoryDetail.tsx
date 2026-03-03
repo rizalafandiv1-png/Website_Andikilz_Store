@@ -18,7 +18,7 @@ export default function CategoryDetail() {
     <div className="max-w-3xl mx-auto px-6 py-24">
       <div className="mb-8">
         <Link to={`/products/${product.id}`} className="text-sm text-zinc-500 hover:text-white transition-colors mb-4 inline-block">
-          &larr; Back to {product.name} Options
+          &larr; Kembali ke Pilihan {product.name}
         </Link>
       </div>
 
@@ -30,7 +30,7 @@ export default function CategoryDetail() {
       >
         {category.popular && (
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-full">
-            Most Popular
+            Paling Populer
           </div>
         )}
         
@@ -40,12 +40,11 @@ export default function CategoryDetail() {
         </div>
         
         <div className="text-center mb-10 pb-10 border-b border-white/5">
-          <span className="text-6xl font-bold">${category.price}</span>
-          <span className="text-zinc-500 ml-2">USD</span>
+          <span className="text-6xl font-bold">Rp {category.price.toLocaleString('id-ID')}</span>
         </div>
         
         <div className="mb-10">
-          <h3 className="text-lg font-semibold mb-6">What's included:</h3>
+          <h3 className="text-lg font-semibold mb-6">Apa yang termasuk:</h3>
           <ul className="space-y-4">
             {category.features.map((feature, idx) => (
               <li key={idx} className="flex items-start gap-3">
@@ -66,7 +65,7 @@ export default function CategoryDetail() {
             className="flex items-center justify-center gap-2"
           >
             <Lock className="w-5 h-5 opacity-70" />
-            Buy Now
+            Beli Sekarang
           </Link>
         </Button>
       </motion.div>

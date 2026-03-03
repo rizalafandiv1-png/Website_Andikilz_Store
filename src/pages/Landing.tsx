@@ -19,68 +19,27 @@ export default function Landing() {
             className="max-w-3xl mx-auto space-y-8"
           >
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]">
-              Premium Digital Access. <br />
+              Akses Digital Premium. <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">
-                Instantly Delivered.
+                Dikirim Instan.
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Get individual premium accounts and game vouchers for the world's best digital tools and entertainment platforms at a fraction of the retail price.
+              Dapatkan akun premium individual untuk alat digital dan platform hiburan terbaik di dunia dengan harga jauh lebih murah.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Button asChild size="lg" className="w-full sm:w-auto rounded-full bg-white text-black hover:bg-zinc-200 text-base h-14 px-8">
-                <Link to="/products">Explore Products</Link>
+                <Link to="/products">Jelajahi Produk</Link>
               </Button>
             </div>
             
             <div className="flex items-center justify-center gap-6 pt-8 text-sm text-zinc-500 font-medium">
-              <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-violet-400" /> Instant Delivery</div>
-              <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-fuchsia-400" /> Secure Checkout</div>
+              <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-violet-400" /> Pengiriman Instan</div>
+              <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-fuchsia-400" /> Pembayaran Aman</div>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Featured Games */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight mb-4">Featured Games</h2>
-              <p className="text-zinc-400">Top up your favorite games instantly.</p>
-            </div>
-            <Link to="/products" className="text-violet-400 hover:text-violet-300 font-medium flex items-center gap-2 transition-colors">
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {productsConfig.filter(p => p.type === "voucher").slice(0, 4).map((game, i) => (
-              <motion.div
-                key={game.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-              >
-                <Link 
-                  to={`/voucher/${game.id}`}
-                  className="group block p-6 rounded-3xl bg-zinc-900/50 border border-white/5 hover:border-violet-500/30 transition-all text-center"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    {game.id === "mobile-legends" && <Gamepad2 className="w-8 h-8 text-violet-400" />}
-                    {game.id === "free-fire" && <Flame className="w-8 h-8 text-amber-400" />}
-                    {game.id === "valorant" && <Gamepad2 className="w-8 h-8 text-rose-400" />}
-                    {game.id === "pubg-mobile" && <Gamepad2 className="w-8 h-8 text-emerald-400" />}
-                  </div>
-                  <h3 className="font-bold text-lg">{game.name}</h3>
-                  <p className="text-xs text-zinc-500 mt-1">Instant Top Up</p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -88,8 +47,8 @@ export default function Landing() {
       <section className="py-24 bg-zinc-900/20 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">How it works</h2>
-            <p className="text-zinc-400">Get your premium account in less than 2 minutes.</p>
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Cara Kerja</h2>
+            <p className="text-zinc-400">Dapatkan akun premium Anda dalam waktu kurang dari 2 menit.</p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 relative">
@@ -98,18 +57,18 @@ export default function Landing() {
             {[
               {
                 icon: <MonitorPlay className="w-6 h-6 text-violet-400" />,
-                title: "1. Choose Product",
-                desc: "Select your desired premium service, category, and duration."
+                title: "1. Pilih Produk",
+                desc: "Pilih layanan premium, kategori, dan durasi yang Anda inginkan."
               },
               {
                 icon: <CreditCard className="w-6 h-6 text-fuchsia-400" />,
-                title: "2. Secure Payment",
-                desc: "Checkout securely via Stripe using your preferred payment method."
+                title: "2. Pembayaran Aman",
+                desc: "Selesaikan pembayaran dengan aman menggunakan metode pilihan Anda."
               },
               {
                 icon: <Mail className="w-6 h-6 text-emerald-400" />,
-                title: "3. Instant Delivery",
-                desc: "Receive your premium account credentials instantly via email."
+                title: "3. Pengiriman Instan",
+                desc: "Terima detail akun premium Anda secara instan melalui sistem kami."
               }
             ].map((step, i) => (
               <motion.div 

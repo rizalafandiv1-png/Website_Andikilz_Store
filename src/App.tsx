@@ -6,7 +6,9 @@ import CategorySelection from "./pages/CategorySelection";
 import CategoryDetail from "./pages/CategoryDetail";
 import Checkout from "./pages/Checkout";
 import QrisPayment from "./pages/QrisPayment";
-import VoucherTopup from "./pages/VoucherTopup";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import OrderHistory from "./pages/OrderHistory";
 
 function App() {
   return (
@@ -17,9 +19,11 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:productId" element={<CategorySelection />} />
           <Route path="/products/:productId/:categoryId" element={<CategoryDetail />} />
-          <Route path="/voucher/:productId" element={<VoucherTopup />} />
           <Route path="/checkout/:productId/:categoryId" element={<Checkout />} />
           <Route path="/payment/qris/:productId/:categoryId" element={<QrisPayment />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/order-history" element={<OrderHistory />} />
         </Route>
       </Routes>
     </BrowserRouter>
