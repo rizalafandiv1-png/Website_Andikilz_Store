@@ -67,6 +67,7 @@ export default function Layout() {
           </div>
           <p>© {new Date().getFullYear()} Andikilz Store. Hak cipta dilindungi undang-undang.</p>
           <div className="flex gap-6">
+            <Link to="/admin" className="hover:text-zinc-300 transition-colors">Admin</Link>
             <a href="#" className="hover:text-zinc-300 transition-colors">Syarat & Ketentuan</a>
             <a href="#" className="hover:text-zinc-300 transition-colors">Privasi</a>
             <a href="#" className="hover:text-zinc-300 transition-colors">Bantuan</a>

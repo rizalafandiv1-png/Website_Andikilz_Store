@@ -1,15 +1,41 @@
+import { useState, useEffect } from "react";
 import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { productsConfig } from "../lib/products";
 import { Button } from "../components/ui/Button";
 import { MessageCircle, AlertCircle, ArrowLeft } from "lucide-react";
 
 export default function QrisPayment() {
   const { productId, categoryId } = useParams();
   const navigate = useNavigate();
-  
-  const product = productsConfig.find(p => p.id === productId);
-  const category = product?.categories.find(c => c.id === categoryId);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch("/api/admin/products");
+        const data = await response.json();
+        const found = data.find((p: any) => p.id === productId);
+        setProduct(found);
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [productId]);
+
+  const category = product?.categories.find((c: any) => c.id === categoryId);
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-24 text-center">
+        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-zinc-500">Menyiapkan pembayaran...</p>
+      </div>
+    );
+  }
 
   if (!product || !category) {
     return <Navigate to="/products" />;
@@ -21,16 +47,30 @@ export default function QrisPayment() {
 
   const priceFormatted = category.price.toLocaleString('id-ID');
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
     const newOrder = {
       id: `ORD-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+      userId: user?.id || "guest",
       productName: product.name,
       categoryName: category.name,
       price: category.price,
       date: new Date().toISOString(),
-      status: "Menunggu"
+      targetId: userId || "",
+      zoneId: zoneId || ""
     };
     
+    try {
+      await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newOrder),
+      });
+    } catch (error) {
+      console.error("Failed to save order to backend:", error);
+    }
+
+    // Still save to local for immediate feedback if needed, but backend is primary
     const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
     localStorage.setItem("orders", JSON.stringify([newOrder, ...existingOrders]));
 

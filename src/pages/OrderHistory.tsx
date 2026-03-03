@@ -13,17 +13,50 @@ interface Order {
 }
 
 export default function OrderHistory() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   useEffect(() => {
-    // Mock orders from localStorage
-    const savedOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-    setOrders(savedOrders);
-  }, []);
+    const fetchOrders = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/orders/user/${user.id}`);
+        const data = await response.json();
+        // Map backend field names to frontend if they differ
+        const mappedData = data.map((o: any) => ({
+          ...o,
+          productName: o.product_name,
+          categoryName: o.category_name
+        }));
+        setOrders(mappedData);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        // Fallback to local storage
+        setOrders(JSON.parse(localStorage.getItem("orders") || "[]"));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user?.id]);
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-24 text-center">
+        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-zinc-500">Memuat riwayat pesanan...</p>
+      </div>
+    );
   }
 
   return (

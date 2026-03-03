@@ -1,11 +1,37 @@
+import { useState, useEffect } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { productsConfig } from "../lib/products";
 import { ArrowRight, Check } from "lucide-react";
 
 export default function CategorySelection() {
   const { productId } = useParams();
-  const product = productsConfig.find(p => p.id === productId);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch("/api/admin/products");
+        const data = await response.json();
+        const found = data.find((p: any) => p.id === productId);
+        setProduct(found);
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [productId]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-24 text-center">
+        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-zinc-500">Memuat detail produk...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return <Navigate to="/products" />;

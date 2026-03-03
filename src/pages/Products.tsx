@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
-import { productsConfig } from "../lib/products";
-import { MonitorPlay, Palette, Bot, ArrowRight, Gamepad2, Flame } from "lucide-react";
+import { MonitorPlay, Palette, Bot, ArrowRight, Gamepad2, Flame, Package } from "lucide-react";
 
 // Helper to map icon names to components
 const getIcon = (iconName: string, className: string) => {
@@ -12,11 +11,38 @@ const getIcon = (iconName: string, className: string) => {
     case "Bot": return <Bot className={className} />;
     case "Gamepad2": return <Gamepad2 className={className} />;
     case "Flame": return <Flame className={className} />;
-    default: return <MonitorPlay className={className} />;
+    default: return <Package className={className} />;
   }
 };
 
 export default function Products() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("/api/admin/products");
+        const data = await response.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 py-24 text-center">
+        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-zinc-500">Memuat daftar produk...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-24">
       <div className="text-center mb-16">
@@ -25,7 +51,7 @@ export default function Products() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        {productsConfig.map((product, i) => (
+        {products.map((product, i) => (
           <motion.div
             key={product.id}
             initial={{ opacity: 0, y: 20 }}
