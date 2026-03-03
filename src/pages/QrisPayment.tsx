@@ -1,4 +1,4 @@
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { productsConfig } from "../lib/products";
 import { Button } from "../components/ui/Button";
@@ -6,6 +6,7 @@ import { MessageCircle, AlertCircle, ArrowLeft } from "lucide-react";
 
 export default function QrisPayment() {
   const { productId, categoryId } = useParams();
+  const navigate = useNavigate();
   
   const product = productsConfig.find(p => p.id === productId);
   const category = product?.categories.find(c => c.id === categoryId);
@@ -32,6 +33,11 @@ export default function QrisPayment() {
     
     const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
     localStorage.setItem("orders", JSON.stringify([newOrder, ...existingOrders]));
+
+    // Navigate to success page after a short delay to allow the WA link to open
+    setTimeout(() => {
+      navigate("/success", { state: { order: newOrder } });
+    }, 100);
   };
 
   return (
