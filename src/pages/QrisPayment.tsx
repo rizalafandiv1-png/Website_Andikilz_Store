@@ -41,14 +41,14 @@ export default function QrisPayment() {
         </div>
 
         <div className="bg-white p-4 rounded-2xl mb-8 max-w-sm mx-auto flex flex-col items-center justify-center shadow-inner">
-          {/* QRIS Image Placeholder */}
+          {/* QRIS Image */}
           <img 
             src="/qris.png" 
             alt="QRIS Payment Code" 
             className="w-full h-auto rounded-xl"
             onError={(e) => {
               // Fallback if image is missing
-              e.currentTarget.src = "blob:https://web.whatsapp.com/b4b031bb-7839-477e-8a1f-b9f762c26041";
+              e.currentTarget.src = "https://placehold.co/400x600/white/black?text=Andikilz+Store+QRIS\\nPlace+qris.png+in+public+folder";
             }}
           />
         </div>
@@ -85,7 +85,7 @@ export default function QrisPayment() {
             <li>Open your E-Wallet (OVO, GoPay, Dana) or Mobile Banking app.</li>
             <li>Select the <strong>Scan QR</strong> option.</li>
             <li>Scan the QRIS code above.</li>
-            <li>Verify the amount and merchant name.</li>
+            <li>Verify the amount and merchant name (<strong>Andikilz Store</strong>).</li>
             <li>Complete the payment.</li>
           </ol>
         </div>
@@ -100,7 +100,7 @@ export default function QrisPayment() {
             asChild
             className="flex-1 rounded-xl h-14 bg-[#25D366] hover:bg-[#1EBE5D] text-white text-base font-medium"
           >
-            <a href={`https://wa.me/1234567890?text=Hello,%20I%20have%20made%20a%20payment%20for%20${product.name}%20-%20${category.name}${userId ? `%20(ID:%20${userId}${zoneId ? `%20Zone:%20${zoneId}` : ""})` : ""}.`} target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/6282258655296?text=Hello,%20I%20have%20made%20a%20payment%20for%20${product.name}%20-%20${category.name}${userId ? `%20(ID:%20${userId}${zoneId ? `%20Zone:%20${zoneId}` : ""})` : ""}.`} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="w-5 h-5 mr-2" />
               Confirm via WhatsApp
             </a>
