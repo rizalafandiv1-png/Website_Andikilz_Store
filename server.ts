@@ -2,10 +2,10 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
-import firebaseConfigJson from './firebase-applet-config.json' assert { type: 'json' };
 // @ts-ignore
 import midtransClient from 'midtrans-client';
 
@@ -19,15 +19,36 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString() });
+});
+
+// Load Firebase Config safely
+let firebaseConfigJson;
+try {
+  const configPath = path.join(__dirname, "firebase-applet-config.json");
+  if (fs.existsSync(configPath)) {
+    firebaseConfigJson = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  } else {
+    console.error("firebase-applet-config.json not found!");
+  }
+} catch (err) {
+  console.error("Failed to load firebase-applet-config.json:", err);
+}
+
 // Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfigJson);
-const db = getFirestore(firebaseApp, firebaseConfigJson.firestoreDatabaseId);
+let db: any;
+if (firebaseConfigJson) {
+  const firebaseApp = initializeApp(firebaseConfigJson);
+  db = getFirestore(firebaseApp, firebaseConfigJson.firestoreDatabaseId);
+}
 
 // Initialize Midtrans
 const snap = new midtransClient.Snap({
   isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-  clientKey: process.env.MIDTRANS_CLIENT_KEY
+  serverKey: process.env.MIDTRANS_SERVER_KEY || 'dummy-key',
+  clientKey: process.env.MIDTRANS_CLIENT_KEY || 'dummy-key'
 });
 
 // Seed initial data if empty
@@ -209,8 +230,15 @@ app.patch("/api/admin/products/:id", async (req, res) => {
 app.delete("/api/admin/products/:id", async (req, res) => {
   const { id } = req.params;
   try {
+    // Delete associated categories first
+    const categoriesQuery = query(collection(db, "categories"), where("product_id", "==", id));
+    const categoriesSnap = await getDocs(categoriesQuery);
+    for (const catDoc of categoriesSnap.docs) {
+      await deleteDoc(doc(db, "categories", catDoc.id));
+    }
+    
+    // Delete the product
     await deleteDoc(doc(db, "products", id));
-    // Note: In a real app, you'd also delete associated categories
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -368,18 +396,36 @@ app.post("/api/user/sync", async (req, res) => {
   }
 });
 
-export default app;
+// --- Server Startup ---
 
-if (process.env.NODE_ENV !== "production") {
-  async function startServer() {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+const startServer = async () => {
+  try {
+    // Listen first to ensure the port is open
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`Server running on http://0.0.0.0:${PORT}`);
+      console.log(`Admin password is: ${process.env.ADMIN_PASSWORD || "admin123"}`);
     });
+
+    // Vite middleware for development
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+      console.log("Vite middleware integrated.");
+    } else {
+      // In production, serve static files from dist
+      app.use(express.static(path.join(__dirname, "dist")));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(__dirname, "dist", "index.html"));
+      });
+    }
+  } catch (error) {
+    console.error("Failed to start server:", error);
   }
-  startServer();
-}
+};
+
+startServer();
+
+export default app;
