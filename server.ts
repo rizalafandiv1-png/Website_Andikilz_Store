@@ -2,17 +2,30 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
 // Initialize SQLite Database
-const db = new Database("app.db");
-db.pragma("journal_mode = WAL");
+// Use /tmp for Vercel compatibility if needed, but better-sqlite3 is tricky on Vercel
+// For now, let's try to handle the case where it might be read-only
+let db: any;
+try {
+  db = new Database(process.env.NODE_ENV === 'production' ? "/tmp/app.db" : "app.db");
+  db.pragma("journal_mode = WAL");
+} catch (err) {
+  console.error("Database initialization failed, using in-memory:", err);
+  db = new Database(":memory:");
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -296,21 +309,18 @@ app.post("/api/user/sync", (req, res) => {
   res.json(user);
 });
 
-// --- Vite Integration ---
-async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+export default app;
+
+if (process.env.NODE_ENV !== "production") {
+  async function startServer() {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    app.use(express.static("dist"));
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  startServer();
 }
-
-startServer();
