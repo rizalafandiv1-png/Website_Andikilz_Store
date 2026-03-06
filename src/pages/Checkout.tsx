@@ -58,32 +58,76 @@ export default function Checkout() {
       const zoneId = searchParams.get("zoneId") || "";
       
       const orderId = `ORD-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
-      const newOrder = {
-        id: orderId,
-        userId: user.uid,
-        productName: product.name,
-        categoryName: category.name,
-        price: category.price,
-        date: new Date().toISOString(),
-        targetId: userId,
-        zoneId: zoneId
-      };
-
+      
       try {
-        const response = await fetch("/api/orders", {
+        // 1. Create order in Firestore
+        const newOrder = {
+          id: orderId,
+          userId: user.uid,
+          productName: product.name,
+          categoryName: category.name,
+          price: category.price,
+          date: new Date().toISOString(),
+          targetId: userId,
+          zoneId: zoneId
+        };
+
+        const orderResponse = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newOrder),
         });
         
-        if (response.ok) {
-          navigate(`/payment/${orderId}`);
+        if (!orderResponse.ok) throw new Error("Gagal membuat pesanan");
+
+        // 2. Create Midtrans transaction
+        const paymentResponse = await fetch("/api/payments/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: orderId,
+            amount: category.price,
+            customerDetails: {
+              first_name: user.displayName || user.email?.split('@')[0],
+              email: user.email,
+            },
+            itemDetails: [{
+              id: category.id,
+              price: category.price,
+              quantity: 1,
+              name: `${product.name} - ${category.name}`
+            }]
+          }),
+        });
+
+        const paymentData = await paymentResponse.json();
+        
+        if (paymentData.token) {
+          // @ts-ignore
+          window.snap.pay(paymentData.token, {
+            onSuccess: function(result: any) {
+              console.log('success', result);
+              navigate("/success");
+            },
+            onPending: function(result: any) {
+              console.log('pending', result);
+              navigate(`/payment/${orderId}`);
+            },
+            onError: function(result: any) {
+              console.log('error', result);
+              alert("Pembayaran gagal. Silakan coba lagi.");
+            },
+            onClose: function() {
+              console.log('customer closed the popup without finishing the payment');
+              navigate(`/payment/${orderId}`);
+            }
+          });
         } else {
-          throw new Error("Gagal membuat pesanan");
+          throw new Error("Gagal mendapatkan token pembayaran");
         }
       } catch (error) {
-        console.error("Order creation failed:", error);
-        alert("Gagal membuat pesanan. Silakan coba lagi.");
+        console.error("Checkout failed:", error);
+        alert("Terjadi kesalahan. Silakan coba lagi.");
       } finally {
         setCreatingOrder(false);
       }

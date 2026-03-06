@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
 import firebaseConfigJson from './firebase-applet-config.json' assert { type: 'json' };
+// @ts-ignore
+import midtransClient from 'midtrans-client';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +22,13 @@ app.use(express.json());
 // Initialize Firebase
 const firebaseApp = initializeApp(firebaseConfigJson);
 const db = getFirestore(firebaseApp, firebaseConfigJson.firestoreDatabaseId);
+
+// Initialize Midtrans
+const snap = new midtransClient.Snap({
+  isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+  serverKey: process.env.MIDTRANS_SERVER_KEY,
+  clientKey: process.env.MIDTRANS_CLIENT_KEY
+});
 
 // Seed initial data if empty
 async function seedData() {
@@ -89,6 +98,71 @@ async function seedData() {
 seedData();
 
 // --- API Routes ---
+
+// Midtrans Payment Creation
+app.post("/api/payments/create", async (req, res) => {
+  const { orderId, amount, customerDetails, itemDetails } = req.body;
+  
+  if (!process.env.MIDTRANS_SERVER_KEY) {
+    return res.status(500).json({ error: "Midtrans Server Key is not configured" });
+  }
+
+  const parameter = {
+    transaction_details: {
+      order_id: orderId,
+      gross_amount: amount
+    },
+    customer_details: customerDetails,
+    item_details: itemDetails,
+    credit_card: {
+      secure: true
+    }
+  };
+
+  try {
+    const transaction = await snap.createTransaction(parameter);
+    res.json(transaction);
+  } catch (error: any) {
+    console.error("Midtrans transaction creation failed:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Midtrans Webhook
+app.post("/api/payments/webhook", async (req, res) => {
+  const notification = req.body;
+  
+  try {
+    const statusResponse = await snap.transaction.notification(notification);
+    const orderId = statusResponse.order_id;
+    const transactionStatus = statusResponse.transaction_status;
+    const fraudStatus = statusResponse.fraud_status;
+
+    let orderStatus = "Menunggu";
+
+    if (transactionStatus === 'capture') {
+      if (fraudStatus === 'challenge') {
+        orderStatus = "Challenge";
+      } else if (fraudStatus === 'accept') {
+        orderStatus = "Selesai";
+      }
+    } else if (transactionStatus === 'settlement') {
+      orderStatus = "Selesai";
+    } else if (transactionStatus === 'cancel' || transactionStatus === 'deny' || transactionStatus === 'expire') {
+      orderStatus = "Dibatalkan";
+    } else if (transactionStatus === 'pending') {
+      orderStatus = "Menunggu";
+    }
+
+    const orderRef = doc(db, "orders", orderId);
+    await updateDoc(orderRef, { status: orderStatus });
+    
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("Midtrans webhook processing failed:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Products Management
 app.get("/api/admin/products", async (req, res) => {
