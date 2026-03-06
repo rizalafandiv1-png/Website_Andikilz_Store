@@ -12,6 +12,34 @@
       },
       "required": ["id", "email"]
     },
+    "Product": {
+      "title": "Product",
+      "description": "Digital product or service",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "required": ["id", "name", "type"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product variation or plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "product_id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "popular": { "type": "boolean" }
+      },
+      "required": ["id", "product_id", "name", "price"]
+    },
     "Order": {
       "title": "Order",
       "description": "Customer order",
@@ -34,6 +62,18 @@
     "users/{userId}": {
       "schema": "User",
       "description": "User profiles"
+    },
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "Product catalog"
+    },
+    "categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Product categories/plans"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders"
     }
   }
 }

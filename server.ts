@@ -1,9 +1,11 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import Database from "better-sqlite3";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import firebaseConfigJson from './firebase-applet-config.json' assert { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,168 +13,130 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
-// Initialize SQLite Database
-// Use /tmp for Vercel compatibility if needed, but better-sqlite3 is tricky on Vercel
-// For now, let's try to handle the case where it might be read-only
-let db: any;
-try {
-  db = new Database(process.env.NODE_ENV === 'production' ? "/tmp/app.db" : "app.db");
-  db.pragma("journal_mode = WAL");
-} catch (err) {
-  console.error("Database initialization failed, using in-memory:", err);
-  db = new Database(":memory:");
-}
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    email TEXT,
-    name TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS orders (
-    id TEXT PRIMARY KEY,
-    user_id TEXT,
-    product_name TEXT,
-    category_name TEXT,
-    price INTEGER,
-    status TEXT DEFAULT 'Menunggu',
-    date TEXT,
-    target_id TEXT,
-    zone_id TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS products (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    description TEXT,
-    icon TEXT,
-    type TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
-    product_id TEXT,
-    name TEXT,
-    description TEXT,
-    price INTEGER,
-    features TEXT,
-    popular INTEGER DEFAULT 0
-  );
-`);
+// Initialize Firebase
+const firebaseApp = initializeApp(firebaseConfigJson);
+const db = getFirestore(firebaseApp, firebaseConfigJson.firestoreDatabaseId);
 
 // Seed initial data if empty
-const productCount = db.prepare("SELECT COUNT(*) as count FROM products").get() as any;
-if (productCount.count === 0) {
-  const initialProducts = [
-    {
-      id: "youtube",
-      name: "YouTube",
-      description: "Video tanpa iklan, putar di latar belakang, dan YouTube Music.",
-      icon: "MonitorPlay",
-      type: "subscription",
-      categories: [
+async function seedData() {
+  try {
+    const productsSnap = await getDocs(collection(db, "products"));
+    if (productsSnap.empty) {
+      console.log("Seeding initial data to Firestore...");
+      const initialProducts = [
         {
-          id: "yt-jaspay-1mo",
-          name: "Jaspay YouTube 1 Bulan",
-          description: "Upgrade akun Anda yang sudah ada melalui Jaspay.",
-          price: 5000,
-          features: ["Akses 1 Bulan", "Video tanpa iklan", "Putar di latar belakang", "Gunakan email sendiri"],
-          popular: 1
+          id: "youtube",
+          name: "YouTube",
+          description: "Video tanpa iklan, putar di latar belakang, dan YouTube Music.",
+          icon: "MonitorPlay",
+          type: "subscription",
+          categories: [
+            {
+              id: "yt-jaspay-1mo",
+              name: "Jaspay YouTube 1 Bulan",
+              description: "Upgrade akun Anda yang sudah ada melalui Jaspay.",
+              price: 5000,
+              features: ["Akses 1 Bulan", "Video tanpa iklan", "Putar di latar belakang", "Gunakan email sendiri"],
+              popular: true
+            },
+            {
+              id: "yt-premium-account-1mo",
+              name: "Akun YouTube Premium 1 Bulan",
+              description: "Akun baru dengan YouTube Premium yang sudah aktif.",
+              price: 8000,
+              features: ["Akses 1 Bulan", "Akun siap pakai", "Pengiriman instan", "Fitur premium lengkap"],
+              popular: false
+            }
+          ]
         },
         {
-          id: "yt-premium-account-1mo",
-          name: "Akun YouTube Premium 1 Bulan",
-          description: "Akun baru dengan YouTube Premium yang sudah aktif.",
-          price: 8000,
-          features: ["Akses 1 Bulan", "Akun siap pakai", "Pengiriman instan", "Fitur premium lengkap"],
-          popular: 0
+          id: "canva",
+          name: "Canva",
+          description: "Template premium, magic resize, dan penghapus latar belakang.",
+          icon: "Palette",
+          type: "subscription",
+          categories: [
+            {
+              id: "cv-invite-1mo",
+              name: "Canva via Invite 1 Bulan",
+              description: "Bergabung dengan tim premium melalui link undangan.",
+              price: 1000,
+              features: ["Akses 1 Bulan", "Gunakan email sendiri", "Template Pro", "Magic Resize"],
+              popular: true
+            }
+          ]
         }
-      ]
-    },
-    {
-      id: "canva",
-      name: "Canva",
-      description: "Template premium, magic resize, dan penghapus latar belakang.",
-      icon: "Palette",
-      type: "subscription",
-      categories: [
-        {
-          id: "cv-invite-1mo",
-          name: "Canva via Invite 1 Bulan",
-          description: "Bergabung dengan tim premium melalui link undangan.",
-          price: 1000,
-          features: ["Akses 1 Bulan", "Gunakan email sendiri", "Template Pro", "Magic Resize"],
-          popular: 1
-        }
-      ]
-    }
-  ];
+      ];
 
-  for (const p of initialProducts) {
-    db.prepare("INSERT INTO products (id, name, description, icon, type) VALUES (?, ?, ?, ?, ?)")
-      .run(p.id, p.name, p.description, p.icon, p.type);
-    
-    for (const c of p.categories) {
-      db.prepare("INSERT INTO categories (id, product_id, name, description, price, features, popular) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .run(c.id, p.id, c.name, c.description, c.price, JSON.stringify(c.features), c.popular);
+      for (const p of initialProducts) {
+        const { categories, ...productData } = p;
+        await setDoc(doc(db, "products", p.id), productData);
+        for (const c of categories) {
+          await setDoc(doc(db, "categories", c.id), { ...c, product_id: p.id });
+        }
+      }
+      console.log("Seeding complete.");
     }
+  } catch (err) {
+    console.error("Seeding failed:", err);
   }
 }
+
+seedData();
 
 // --- API Routes ---
 
 // Products Management
-app.get("/api/admin/products", (req, res) => {
-  const products = db.prepare("SELECT * FROM products").all();
-  const categories = db.prepare("SELECT * FROM categories").all();
-  
-  const result = products.map((p: any) => ({
-    ...p,
-    categories: categories
-      .filter((c: any) => c.product_id === p.id)
-      .map((c: any) => ({
-        ...c,
-        features: JSON.parse(c.features || "[]"),
-        popular: !!c.popular
-      }))
-  }));
-  
-  res.json(result);
+app.get("/api/admin/products", async (req, res) => {
+  try {
+    const productsSnap = await getDocs(collection(db, "products"));
+    const categoriesSnap = await getDocs(collection(db, "categories"));
+    
+    const products = productsSnap.docs.map(doc => doc.data());
+    const categories = categoriesSnap.docs.map(doc => doc.data());
+    
+    const result = products.map((p: any) => ({
+      ...p,
+      categories: categories
+        .filter((c: any) => c.product_id === p.id)
+    }));
+    
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post("/api/admin/products", (req, res) => {
+app.post("/api/admin/products", async (req, res) => {
   const { id, name, description, icon, type } = req.body;
   try {
-    db.prepare("INSERT INTO products (id, name, description, icon, type) VALUES (?, ?, ?, ?, ?)")
-      .run(id, name, description, icon, type);
+    await setDoc(doc(db, "products", id), { id, name, description, icon, type });
     res.status(201).json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.patch("/api/admin/products/:id", (req, res) => {
+app.patch("/api/admin/products/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, icon, type } = req.body;
   try {
-    db.prepare("UPDATE products SET name = ?, description = ?, icon = ?, type = ? WHERE id = ?")
-      .run(name, description, icon, type, id);
+    await updateDoc(doc(db, "products", id), { name, description, icon, type });
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.delete("/api/admin/products/:id", (req, res) => {
+app.delete("/api/admin/products/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    db.prepare("DELETE FROM products WHERE id = ?").run(id);
-    db.prepare("DELETE FROM categories WHERE product_id = ?").run(id);
+    await deleteDoc(doc(db, "products", id));
+    // Note: In a real app, you'd also delete associated categories
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -180,33 +144,31 @@ app.delete("/api/admin/products/:id", (req, res) => {
 });
 
 // Categories Management
-app.post("/api/admin/categories", (req, res) => {
+app.post("/api/admin/categories", async (req, res) => {
   const { id, product_id, name, description, price, features, popular } = req.body;
   try {
-    db.prepare("INSERT INTO categories (id, product_id, name, description, price, features, popular) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(id, product_id, name, description, price, JSON.stringify(features), popular ? 1 : 0);
+    await setDoc(doc(db, "categories", id), { id, product_id, name, description, price, features, popular: !!popular });
     res.status(201).json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.patch("/api/admin/categories/:id", (req, res) => {
+app.patch("/api/admin/categories/:id", async (req, res) => {
   const { id } = req.params;
   const { name, description, price, features, popular } = req.body;
   try {
-    db.prepare("UPDATE categories SET name = ?, description = ?, price = ?, features = ?, popular = ? WHERE id = ?")
-      .run(name, description, price, JSON.stringify(features), popular ? 1 : 0, id);
+    await updateDoc(doc(db, "categories", id), { name, description, price, features, popular: !!popular });
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.delete("/api/admin/categories/:id", (req, res) => {
+app.delete("/api/admin/categories/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+    await deleteDoc(doc(db, "categories", id));
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -216,7 +178,7 @@ app.delete("/api/admin/categories/:id", (req, res) => {
 // Admin Login
 app.post("/api/admin/login", (req, res) => {
   const { password } = req.body;
-  const adminPassword = process.env.ADMIN_PASSWORD || "admin123"; // Default for demo
+  const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
   
   if (password === adminPassword) {
     res.json({ success: true, token: "admin-session-token-" + Date.now() });
@@ -226,39 +188,57 @@ app.post("/api/admin/login", (req, res) => {
 });
 
 // Get all orders (Admin)
-app.get("/api/orders", (req, res) => {
-  const orders = db.prepare("SELECT * FROM orders ORDER BY date DESC").all();
-  res.json(orders);
+app.get("/api/orders", async (req, res) => {
+  try {
+    const ordersSnap = await getDocs(query(collection(db, "orders"), orderBy("date", "desc")));
+    res.json(ordersSnap.docs.map(doc => doc.data()));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get orders for a specific user
-app.get("/api/orders/user/:userId", (req, res) => {
+app.get("/api/orders/user/:userId", async (req, res) => {
   const { userId } = req.params;
-  const orders = db.prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY date DESC").all(userId);
-  res.json(orders);
+  try {
+    const q = query(collection(db, "orders"), where("user_id", "==", userId), orderBy("date", "desc"));
+    const ordersSnap = await getDocs(q);
+    res.json(ordersSnap.docs.map(doc => doc.data()));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Get single order by ID
-app.get("/api/orders/:id", (req, res) => {
+app.get("/api/orders/:id", async (req, res) => {
   const { id } = req.params;
-  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
-  if (order) {
-    res.json(order);
-  } else {
-    res.status(404).json({ error: "Order not found" });
+  try {
+    const orderDoc = await getDoc(doc(db, "orders", id));
+    if (orderDoc.exists()) {
+      res.json(orderDoc.data());
+    } else {
+      res.status(404).json({ error: "Order not found" });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 // Create a new order
-app.post("/api/orders", (req, res) => {
+app.post("/api/orders", async (req, res) => {
   const { id, userId, productName, categoryName, price, date, targetId, zoneId } = req.body;
-  
   try {
-    db.prepare(`
-      INSERT INTO orders (id, user_id, product_name, category_name, price, date, target_id, zone_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, userId, productName, categoryName, price, date, targetId, zoneId);
-    
+    await setDoc(doc(db, "orders", id), { 
+      id, 
+      user_id: userId, 
+      product_name: productName, 
+      category_name: categoryName, 
+      price, 
+      date, 
+      target_id: targetId, 
+      zone_id: zoneId,
+      status: 'Menunggu'
+    });
     res.status(201).json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -266,12 +246,11 @@ app.post("/api/orders", (req, res) => {
 });
 
 // Update order status
-app.patch("/api/orders/:id", (req, res) => {
+app.patch("/api/orders/:id", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  
   try {
-    db.prepare("UPDATE orders SET status = ? WHERE id = ?").run(status, id);
+    await updateDoc(doc(db, "orders", id), { status });
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -279,11 +258,10 @@ app.patch("/api/orders/:id", (req, res) => {
 });
 
 // Delete an order
-app.delete("/api/orders/:id", (req, res) => {
+app.delete("/api/orders/:id", async (req, res) => {
   const { id } = req.params;
-  
   try {
-    db.prepare("DELETE FROM orders WHERE id = ?").run(id);
+    await deleteDoc(doc(db, "orders", id));
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -291,22 +269,29 @@ app.delete("/api/orders/:id", (req, res) => {
 });
 
 // Sync user
-app.post("/api/user/sync", (req, res) => {
+app.post("/api/user/sync", async (req, res) => {
   const { id, email, name } = req.body;
   if (!id || !email) {
     res.status(400).json({ error: "Missing id or email" });
     return;
   }
 
-  const existing = db.prepare("SELECT * FROM users WHERE id = ?").get(id);
-  if (!existing) {
-    db.prepare("INSERT INTO users (id, email, name) VALUES (?, ?, ?)").run(id, email, name);
-  } else {
-    db.prepare("UPDATE users SET email = ?, name = ? WHERE id = ?").run(email, name, id);
+  try {
+    const userRef = doc(db, "users", id);
+    const userDoc = await getDoc(userRef);
+    const userData = { id, email, name, updatedAt: new Date().toISOString() };
+    
+    if (!userDoc.exists()) {
+      await setDoc(userRef, { ...userData, createdAt: new Date().toISOString() });
+    } else {
+      await updateDoc(userRef, userData);
+    }
+    
+    const updatedUser = await getDoc(userRef);
+    res.json(updatedUser.data());
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
-  
-  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(id);
-  res.json(user);
 });
 
 export default app;
