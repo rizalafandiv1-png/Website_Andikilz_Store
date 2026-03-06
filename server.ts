@@ -225,6 +225,17 @@ app.get("/api/orders/user/:userId", (req, res) => {
   res.json(orders);
 });
 
+// Get single order by ID
+app.get("/api/orders/:id", (req, res) => {
+  const { id } = req.params;
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(id);
+  if (order) {
+    res.json(order);
+  } else {
+    res.status(404).json({ error: "Order not found" });
+  }
+});
+
 // Create a new order
 app.post("/api/orders", (req, res) => {
   const { id, userId, productName, categoryName, price, date, targetId, zoneId } = req.body;

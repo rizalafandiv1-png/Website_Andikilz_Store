@@ -36,11 +36,11 @@ export default function Success() {
           <div className="space-y-4">
             <div className="flex justify-between py-3 border-b border-white/5">
               <span className="text-zinc-500">Produk</span>
-              <span className="font-medium text-zinc-200">{orderData.productName}</span>
+              <span className="font-medium text-zinc-200">{orderData.product_name || orderData.productName}</span>
             </div>
             <div className="flex justify-between py-3 border-b border-white/5">
               <span className="text-zinc-500">Paket</span>
-              <span className="font-medium text-zinc-200">{orderData.categoryName}</span>
+              <span className="font-medium text-zinc-200">{orderData.category_name || orderData.categoryName}</span>
             </div>
             <div className="flex justify-between py-3 border-b border-white/5">
               <span className="text-zinc-500">ID Pesanan</span>

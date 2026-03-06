@@ -1,7 +1,19 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
-import { MonitorPlay, Palette, Bot, ArrowRight, Gamepad2, Flame, Package } from "lucide-react";
+import { 
+  MonitorPlay, 
+  Palette, 
+  Bot, 
+  ArrowRight, 
+  Gamepad2, 
+  Flame, 
+  Package,
+  Smartphone,
+  Tv,
+  Music,
+  ShieldCheck
+} from "lucide-react";
 
 // Helper to map icon names to components
 const getIcon = (iconName: string, className: string) => {
@@ -11,6 +23,10 @@ const getIcon = (iconName: string, className: string) => {
     case "Bot": return <Bot className={className} />;
     case "Gamepad2": return <Gamepad2 className={className} />;
     case "Flame": return <Flame className={className} />;
+    case "Smartphone": return <Smartphone className={className} />;
+    case "Tv": return <Tv className={className} />;
+    case "Music": return <Music className={className} />;
+    case "ShieldCheck": return <ShieldCheck className={className} />;
     default: return <Package className={className} />;
   }
 };

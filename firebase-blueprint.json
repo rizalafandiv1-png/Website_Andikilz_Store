@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Firebase UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "product_name": { "type": "string" },
+        "category_name": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["Menunggu", "Proses", "Selesai", "Dibatalkan"] },
+        "date": { "type": "string", "format": "date-time" },
+        "target_id": { "type": "string" },
+        "zone_id": { "type": "string" }
+      },
+      "required": ["id", "user_id", "product_name", "category_name", "price", "date"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    }
+  }
+}

@@ -2,14 +2,17 @@ import { useState, useEffect } from "react";
 import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Button } from "../components/ui/Button";
-import { QrCode, CreditCard } from "lucide-react";
+import { QrCode, CreditCard, Loader2 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function Checkout() {
   const { productId, categoryId } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingOrder, setCreatingOrder] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -29,7 +32,7 @@ export default function Checkout() {
 
   const category = product?.categories.find((c: any) => c.id === categoryId);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-24 text-center">
         <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -42,10 +45,48 @@ export default function Checkout() {
     return <Navigate to="/products" />;
   }
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (!user) {
+      navigate("/login", { state: { from: window.location.pathname + window.location.search } });
+      return;
+    }
+
     if (selectedMethod === "qris") {
+      setCreatingOrder(true);
       const searchParams = new URLSearchParams(window.location.search);
-      navigate(`/payment/qris/${product.id}/${category.id}?${searchParams.toString()}`);
+      const userId = searchParams.get("userId") || "";
+      const zoneId = searchParams.get("zoneId") || "";
+      
+      const orderId = `ORD-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+      const newOrder = {
+        id: orderId,
+        userId: user.uid,
+        productName: product.name,
+        categoryName: category.name,
+        price: category.price,
+        date: new Date().toISOString(),
+        targetId: userId,
+        zoneId: zoneId
+      };
+
+      try {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newOrder),
+        });
+        
+        if (response.ok) {
+          navigate(`/payment/${orderId}`);
+        } else {
+          throw new Error("Gagal membuat pesanan");
+        }
+      } catch (error) {
+        console.error("Order creation failed:", error);
+        alert("Gagal membuat pesanan. Silakan coba lagi.");
+      } finally {
+        setCreatingOrder(false);
+      }
     }
   };
 
@@ -126,11 +167,18 @@ export default function Checkout() {
 
             <Button 
               onClick={handleContinue}
-              disabled={!selectedMethod}
+              disabled={!selectedMethod || creatingOrder}
               size="lg" 
               className="w-full rounded-xl h-14 text-base font-medium bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500"
             >
-              Lanjutkan ke Pembayaran
+              {creatingOrder ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                "Lanjutkan ke Pembayaran"
+              )}
             </Button>
           </div>
         </div>

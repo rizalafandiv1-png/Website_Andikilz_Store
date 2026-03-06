@@ -1,89 +1,116 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
+import { useNavigate, Link } from "react-router-dom";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "../firebase";
 import { Button } from "../components/ui/Button";
-import { Mail, Lock, ArrowRight, User } from "lucide-react";
+import { UserPlus, Mail, Lock, User } from "lucide-react";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock registration
-    localStorage.setItem("user", JSON.stringify({ email, name }));
-    navigate("/");
-    window.location.reload();
+    setLoading(true);
+    setError("");
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: name });
+      navigate("/");
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError("Email sudah terdaftar.");
+      } else if (err.code === 'auth/weak-password') {
+        setError("Password minimal 6 karakter.");
+      } else {
+        setError("Terjadi kesalahan. Silakan coba lagi.");
+      }
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto px-6 py-24">
-      <motion.div
+    <div className="min-h-[80vh] flex items-center justify-center px-6 py-12">
+      <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="p-8 rounded-3xl bg-[#0a0a0a] border border-white/10 shadow-2xl"
+        className="w-full max-w-md bg-[#0a0a0a] border border-white/5 p-8 rounded-3xl shadow-2xl"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Daftar</h1>
-          <p className="text-zinc-400 text-sm">Buat akun Andikilz Store Anda</p>
+          <div className="w-16 h-16 bg-violet-500/10 border border-violet-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <UserPlus className="w-8 h-8 text-violet-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Buat Akun Baru</h1>
+          <p className="text-zinc-500 text-sm mt-2">Bergabung dengan komunitas Andikilz Store</p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-              <User className="w-4 h-4" /> Nama Lengkap
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Andi"
-              className="w-full bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
+        {error && (
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-sm mb-6">
+            {error}
           </div>
+        )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-              <Mail className="w-4 h-4" /> Email
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nama@email.com"
-              className="w-full bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Nama Lengkap</label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input 
+                type="text" 
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-black border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
+                placeholder="Andi Kilz"
+              />
+            </div>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-              <Lock className="w-4 h-4" /> Kata Sandi
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-zinc-900 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500/50 transition-colors"
-            />
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-black border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
+                placeholder="nama@email.com"
+              />
+            </div>
           </div>
-
-          <Button type="submit" className="w-full rounded-xl h-12 bg-white text-black hover:bg-zinc-200">
-            Daftar <ArrowRight className="w-4 h-4 ml-2" />
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input 
+                type="password" 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-black border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
+                placeholder="Minimal 6 karakter"
+              />
+            </div>
+          </div>
+          <Button type="submit" disabled={loading} className="w-full bg-violet-500 hover:bg-violet-600 text-white py-6 rounded-xl font-bold">
+            {loading ? "Memproses..." : "Daftar Akun"}
           </Button>
         </form>
 
-        <div className="mt-8 pt-8 border-t border-white/5 text-center text-sm">
-          <span className="text-zinc-500">Sudah punya akun?</span>{" "}
+        <p className="text-center text-zinc-500 text-sm mt-8">
+          Sudah punya akun?{" "}
           <Link to="/login" className="text-violet-400 hover:text-violet-300 font-medium">
             Masuk Sekarang
           </Link>
-        </div>
+        </p>
       </motion.div>
     </div>
   );

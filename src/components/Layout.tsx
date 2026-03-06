@@ -1,15 +1,21 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { Logo } from "./Logo";
-import { User, LogOut, Clock } from "lucide-react";
+import { User, LogOut, Clock, LogIn } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
 
 export default function Layout() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const { user, loading } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    navigate("/");
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
   };
 
   return (
@@ -26,28 +32,30 @@ export default function Layout() {
               Produk
             </Link>
             
-            {user ? (
-              <div className="flex items-center gap-4">
-                <Link to="/order-history" className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
-                  <Clock className="w-4 h-4" /> Riwayat
-                </Link>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-white/5">
-                  <User className="w-4 h-4 text-violet-400" />
-                  <span className="text-zinc-300">{user.name}</span>
-                  <button onClick={handleLogout} className="ml-2 p-1 hover:text-rose-400 transition-colors">
-                    <LogOut className="w-4 h-4" />
-                  </button>
+            {!loading && (
+              user ? (
+                <div className="flex items-center gap-4">
+                  <Link to="/order-history" className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Riwayat
+                  </Link>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-white/5">
+                    <User className="w-4 h-4 text-violet-400" />
+                    <span className="text-zinc-300 truncate max-w-[100px]">{user.displayName || user.email?.split('@')[0]}</span>
+                    <button onClick={handleLogout} className="ml-2 p-1 hover:text-rose-400 transition-colors">
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <Link to="/login" className="text-zinc-400 hover:text-white transition-colors">
-                  Masuk
-                </Link>
-                <Link to="/products" className="px-5 py-2 rounded-full bg-white text-black hover:bg-zinc-200 transition-colors">
-                  Mulai
-                </Link>
-              </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <Link to="/login" className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2">
+                    <LogIn className="w-4 h-4" /> Masuk
+                  </Link>
+                  <Link to="/products" className="px-5 py-2 rounded-full bg-white text-black hover:bg-zinc-200 transition-colors">
+                    Mulai
+                  </Link>
+                </div>
+              )
             )}
           </div>
         </div>

@@ -67,7 +67,23 @@ export default function AdminDashboard() {
   }, [adminToken, activeTab]);
 
   const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: "", description: "", icon: "MonitorPlay" });
+  const [isEditingProduct, setIsEditingProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [newProduct, setNewProduct] = useState({ name: "", description: "", icon: "MonitorPlay", type: "subscription" });
+
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [newCategory, setNewCategory] = useState({ 
+    name: "", 
+    price: "", 
+    description: "", 
+    features: "Akses Premium, Garansi Full",
+    popular: false 
+  });
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'product' | 'category' | 'order', id: string } | null>(null);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +92,7 @@ export default function AdminDashboard() {
       const response = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newProduct, id: productId, type: "subscription" }),
+        body: JSON.stringify({ ...newProduct, id: productId }),
       });
       if (response.ok) {
         setIsAddingProduct(false);
@@ -88,12 +104,27 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddCategory = async (productId: string) => {
-    const name = prompt("Nama Paket (contoh: 1 Bulan):");
-    if (!name) return;
-    const price = prompt("Harga (angka saja):");
-    if (!price) return;
-    const description = prompt("Deskripsi:");
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/admin/products/${editingProduct.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingProduct),
+      });
+      if (response.ok) {
+        setIsEditingProduct(false);
+        setEditingProduct(null);
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Failed to edit product:", error);
+    }
+  };
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductId) return;
     const categoryId = `cat-${Math.floor(Math.random() * 1000000)}`;
     
     try {
@@ -102,19 +133,43 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: categoryId,
-          product_id: productId,
-          name,
-          price: parseInt(price),
-          description: description || "",
-          features: ["Akses Premium", "Garansi Full"],
-          popular: false
+          product_id: selectedProductId,
+          ...newCategory,
+          price: parseInt(newCategory.price),
+          features: newCategory.features.split(",").map(f => f.trim()).filter(f => f !== ""),
         }),
       });
       if (response.ok) {
+        setIsAddingCategory(false);
+        setNewCategory({ name: "", price: "", description: "", features: "Akses Premium, Garansi Full", popular: false });
         fetchData();
       }
     } catch (error) {
       console.error("Failed to add category:", error);
+    }
+  };
+
+  const handleEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/admin/categories/${editingCategory.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editingCategory,
+          price: parseInt(editingCategory.price),
+          features: typeof editingCategory.features === "string" 
+            ? editingCategory.features.split(",").map((f: string) => f.trim()).filter((f: string) => f !== "")
+            : editingCategory.features,
+        }),
+      });
+      if (response.ok) {
+        setIsEditingCategory(false);
+        setEditingCategory(null);
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Failed to edit category:", error);
     }
   };
 
@@ -144,12 +199,12 @@ export default function AdminDashboard() {
   };
 
   const deleteOrder = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus pesanan ini?")) return;
     try {
       const response = await fetch(`/api/orders/${id}`, {
         method: "DELETE",
       });
       if (response.ok) {
+        setDeleteConfirm(null);
         setOrders(orders.filter(o => o.id !== id));
       }
     } catch (error) {
@@ -159,22 +214,37 @@ export default function AdminDashboard() {
 
   // --- Product Actions ---
   const deleteProduct = async (id: string) => {
-    if (!confirm("Hapus produk ini? Semua kategori di dalamnya juga akan terhapus.")) return;
     try {
       const response = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-      if (response.ok) fetchData();
+      if (response.ok) {
+        setDeleteConfirm(null);
+        fetchData();
+      }
     } catch (error) {
       console.error("Failed to delete product:", error);
     }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm("Hapus kategori ini?")) return;
     try {
       const response = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
-      if (response.ok) fetchData();
+      if (response.ok) {
+        setDeleteConfirm(null);
+        fetchData();
+      }
     } catch (error) {
       console.error("Failed to delete category:", error);
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'product') {
+      deleteProduct(deleteConfirm.id);
+    } else if (deleteConfirm.type === 'category') {
+      deleteCategory(deleteConfirm.id);
+    } else if (deleteConfirm.type === 'order') {
+      deleteOrder(deleteConfirm.id);
     }
   };
 
@@ -227,22 +297,23 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {isAddingProduct && (
+      {/* Add/Edit Product Modal */}
+      {(isAddingProduct || isEditingProduct) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-zinc-900 border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl"
           >
-            <h2 className="text-2xl font-bold mb-6">Tambah Produk Baru</h2>
-            <form onSubmit={handleAddProduct} className="space-y-4">
+            <h2 className="text-2xl font-bold mb-6">{isEditingProduct ? "Edit Produk" : "Tambah Produk Baru"}</h2>
+            <form onSubmit={isEditingProduct ? handleEditProduct : handleAddProduct} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Nama Produk</label>
                 <input
                   type="text"
                   required
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  value={isEditingProduct ? editingProduct.name : newProduct.name}
+                  onChange={(e) => isEditingProduct ? setEditingProduct({ ...editingProduct, name: e.target.value }) : setNewProduct({ ...newProduct, name: e.target.value })}
                   className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
                   placeholder="Contoh: Netflix Premium"
                 />
@@ -251,17 +322,28 @@ export default function AdminDashboard() {
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Deskripsi</label>
                 <textarea
                   required
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                  value={isEditingProduct ? editingProduct.description : newProduct.description}
+                  onChange={(e) => isEditingProduct ? setEditingProduct({ ...editingProduct, description: e.target.value }) : setNewProduct({ ...newProduct, description: e.target.value })}
                   className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all h-24"
                   placeholder="Deskripsi singkat produk..."
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Tipe Produk</label>
+                <select
+                  value={isEditingProduct ? editingProduct.type : newProduct.type}
+                  onChange={(e) => isEditingProduct ? setEditingProduct({ ...editingProduct, type: e.target.value }) : setNewProduct({ ...newProduct, type: e.target.value })}
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                >
+                  <option value="subscription">Subscription (Email/Akun)</option>
+                  <option value="topup">Top Up (User ID/Zone ID)</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">Icon (Lucide Name)</label>
                 <select
-                  value={newProduct.icon}
-                  onChange={(e) => setNewProduct({ ...newProduct, icon: e.target.value })}
+                  value={isEditingProduct ? editingProduct.icon : newProduct.icon}
+                  onChange={(e) => isEditingProduct ? setEditingProduct({ ...editingProduct, icon: e.target.value }) : setNewProduct({ ...newProduct, icon: e.target.value })}
                   className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
                 >
                   <option value="MonitorPlay">MonitorPlay</option>
@@ -269,13 +351,115 @@ export default function AdminDashboard() {
                   <option value="Bot">Bot</option>
                   <option value="Gamepad2">Gamepad2</option>
                   <option value="Flame">Flame</option>
+                  <option value="Smartphone">Smartphone</option>
+                  <option value="Tv">Tv</option>
+                  <option value="Music">Music</option>
+                  <option value="ShieldCheck">ShieldCheck</option>
                 </select>
               </div>
               <div className="flex gap-3 pt-4">
-                <Button type="button" onClick={() => setIsAddingProduct(false)} variant="outline" className="flex-1 rounded-xl">Batal</Button>
+                <Button type="button" onClick={() => { setIsAddingProduct(false); setIsEditingProduct(false); }} variant="outline" className="flex-1 rounded-xl">Batal</Button>
                 <Button type="submit" className="flex-1 bg-violet-500 hover:bg-violet-600 rounded-xl">Simpan</Button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add/Edit Category Modal */}
+      {(isAddingCategory || isEditingCategory) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-zinc-900 border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl"
+          >
+            <h2 className="text-2xl font-bold mb-6">{isEditingCategory ? "Edit Paket" : "Tambah Paket Baru"}</h2>
+            <form onSubmit={isEditingCategory ? handleEditCategory : handleAddCategory} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Nama Paket</label>
+                <input
+                  type="text"
+                  required
+                  value={isEditingCategory ? editingCategory.name : newCategory.name}
+                  onChange={(e) => isEditingCategory ? setEditingCategory({ ...editingCategory, name: e.target.value }) : setNewCategory({ ...newCategory, name: e.target.value })}
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                  placeholder="Contoh: 1 Bulan"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Harga (Rp)</label>
+                <input
+                  type="number"
+                  required
+                  value={isEditingCategory ? editingCategory.price : newCategory.price}
+                  onChange={(e) => isEditingCategory ? setEditingCategory({ ...editingCategory, price: e.target.value }) : setNewCategory({ ...newCategory, price: e.target.value })}
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                  placeholder="Contoh: 5000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Deskripsi</label>
+                <input
+                  type="text"
+                  value={isEditingCategory ? editingCategory.description : newCategory.description}
+                  onChange={(e) => isEditingCategory ? setEditingCategory({ ...editingCategory, description: e.target.value }) : setNewCategory({ ...newCategory, description: e.target.value })}
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                  placeholder="Deskripsi singkat paket..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Fitur (Pisahkan dengan koma)</label>
+                <input
+                  type="text"
+                  value={isEditingCategory ? (Array.isArray(editingCategory.features) ? editingCategory.features.join(", ") : editingCategory.features) : newCategory.features}
+                  onChange={(e) => isEditingCategory ? setEditingCategory({ ...editingCategory, features: e.target.value }) : setNewCategory({ ...newCategory, features: e.target.value })}
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                  placeholder="Contoh: Akses Premium, Garansi Full"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="popular"
+                  checked={isEditingCategory ? editingCategory.popular : newCategory.popular}
+                  onChange={(e) => isEditingCategory ? setEditingCategory({ ...editingCategory, popular: e.target.checked }) : setNewCategory({ ...newCategory, popular: e.target.checked })}
+                  className="w-4 h-4 accent-violet-500"
+                />
+                <label htmlFor="popular" className="text-sm font-medium text-zinc-400">Tandai sebagai Populer</label>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button type="button" onClick={() => { setIsAddingCategory(false); setIsEditingCategory(false); }} variant="outline" className="flex-1 rounded-xl">Batal</Button>
+                <Button type="submit" className="flex-1 bg-violet-500 hover:bg-violet-600 rounded-xl">Simpan</Button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-zinc-900 border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center"
+          >
+            <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Trash2 className="w-8 h-8 text-rose-500" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Konfirmasi Hapus</h2>
+            <p className="text-zinc-400 mb-8">
+              {deleteConfirm.type === 'product' 
+                ? "Apakah Anda yakin ingin menghapus produk ini? Semua paket di dalamnya juga akan terhapus." 
+                : deleteConfirm.type === 'category'
+                ? "Apakah Anda yakin ingin menghapus paket ini?"
+                : "Apakah Anda yakin ingin menghapus pesanan ini?"}
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={() => setDeleteConfirm(null)} variant="outline" className="flex-1 rounded-xl">Batal</Button>
+              <Button onClick={handleDeleteConfirm} className="flex-1 bg-rose-500 hover:bg-rose-600 rounded-xl text-white">Hapus</Button>
+            </div>
           </motion.div>
         </div>
       )}
@@ -425,7 +609,7 @@ export default function AdminDashboard() {
                               <option value="Dibatalkan">Dibatalkan</option>
                             </select>
                             <button 
-                              onClick={() => deleteOrder(order.id)}
+                              onClick={() => setDeleteConfirm({ type: 'order', id: order.id })}
                               className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-400 text-zinc-500 transition-colors"
                               title="Hapus"
                             >
@@ -461,15 +645,15 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="border-white/10">Edit</Button>
-                    <Button variant="outline" size="sm" onClick={() => deleteProduct(product.id)} className="border-rose-500/20 text-rose-400 hover:bg-rose-500/10">Hapus</Button>
+                    <Button variant="outline" size="sm" onClick={() => { setEditingProduct(product); setIsEditingProduct(true); }} className="border-white/10">Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => setDeleteConfirm({ type: 'product', id: product.id })} className="border-rose-500/20 text-rose-400 hover:bg-rose-500/10">Hapus</Button>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Kategori / Paket</h4>
-                    <Button onClick={() => handleAddCategory(product.id)} variant="outline" size="sm" className="text-xs border-white/5">Tambah Paket</Button>
+                    <Button onClick={() => { setSelectedProductId(product.id); setIsAddingCategory(true); }} variant="outline" size="sm" className="text-xs border-white/5">Tambah Paket</Button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {product.categories.map((cat: any) => (
@@ -480,8 +664,8 @@ export default function AdminDashboard() {
                         </div>
                         <div className="text-lg font-bold text-violet-400 mb-3">Rp {cat.price.toLocaleString('id-ID')}</div>
                         <div className="flex gap-2">
-                          <button className="text-xs text-zinc-500 hover:text-white">Edit</button>
-                          <button onClick={() => deleteCategory(cat.id)} className="text-xs text-rose-500/70 hover:text-rose-400">Hapus</button>
+                          <button onClick={() => { setEditingCategory(cat); setIsEditingCategory(true); }} className="text-xs text-zinc-500 hover:text-white">Edit</button>
+                          <button onClick={() => setDeleteConfirm({ type: 'category', id: cat.id })} className="text-xs text-rose-500/70 hover:text-rose-400">Hapus</button>
                         </div>
                       </div>
                     ))}
