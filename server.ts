@@ -155,14 +155,23 @@ async function seedData() {
   }
 }
 
-seedData();
+seedData().catch(err => console.error("Top-level seedData failed:", err));
 
 // --- API Routes ---
+
+// Test JSON endpoint
+app.get("/api/test-json", (req, res) => {
+  res.json({ ok: true, time: new Date().toISOString(), env: process.env.NODE_ENV });
+});
 
 // Midtrans Payment Creation
 app.post("/api/payments/create", async (req, res) => {
   const { orderId, amount, customerDetails, itemDetails } = req.body;
   
+  if (!snap) {
+    return res.status(500).json({ error: "Midtrans is not initialized" });
+  }
+
   if (!process.env.MIDTRANS_SERVER_KEY) {
     return res.status(500).json({ error: "Midtrans Server Key is not configured" });
   }
@@ -192,6 +201,10 @@ app.post("/api/payments/create", async (req, res) => {
 app.post("/api/payments/webhook", async (req, res) => {
   const notification = req.body;
   
+  if (!snap) {
+    return res.status(500).json({ error: "Midtrans is not initialized" });
+  }
+
   try {
     const statusResponse = await snap.transaction.notification(notification);
     const orderId = statusResponse.order_id;
@@ -401,20 +414,15 @@ app.get("/api/admin/login", (req, res) => {
 });
 
 app.post("/api/admin/login", (req, res) => {
-  console.log("Login request received:", { 
-    hasBody: !!req.body, 
-    bodyKeys: Object.keys(req.body || {}),
-    contentType: req.headers["content-type"]
-  });
-  
   const { password } = req.body;
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
   
-  // Log password info for debugging (safely)
-  console.log("Password check:", {
-    inputLength: password?.length || 0,
-    expectedLength: adminPassword.length,
-    match: password === adminPassword
+  console.log("Login request received:", { 
+    hasBody: !!req.body, 
+    bodyKeys: Object.keys(req.body || {}),
+    contentType: req.headers["content-type"],
+    passwordReceived: !!password,
+    passwordLength: password?.length || 0
   });
   
   if (password === adminPassword) {
@@ -507,6 +515,16 @@ app.delete("/api/orders/:id", async (req, res) => {
   }
 });
 
+// Global error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error("GLOBAL ERROR:", err);
+  res.status(500).json({ 
+    error: "Internal Server Error", 
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 // Sync user
 app.post("/api/user/sync", async (req, res) => {
   const { id, email, name } = req.body;
@@ -578,6 +596,6 @@ const startServer = async () => {
   }
 };
 
-startServer();
+startServer().catch(err => console.error("Top-level startServer failed:", err));
 
 export default app;
