@@ -19,9 +19,15 @@ export default function AdminLogin() {
       // Test health check first
       try {
         const healthCheck = await fetch("/api/health");
-        if (!healthCheck.ok) console.warn("Health check failed, but continuing login attempt...");
+        if (!healthCheck.ok) {
+          console.warn("Health check failed");
+          // Don't set error yet, let login attempt proceed
+        }
       } catch (hErr) {
         console.error("Health check network error:", hErr);
+        setError("Koneksi ke server gagal (Health Check)");
+        setLoading(false);
+        return;
       }
 
       const response = await fetch("/api/admin/login", {

@@ -27,11 +27,11 @@ app.get("/api/health", (req, res) => {
 // Load Firebase Config safely
 let firebaseConfigJson;
 try {
-  const configPath = path.join(__dirname, "firebase-applet-config.json");
+  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(configPath)) {
     firebaseConfigJson = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   } else {
-    console.error("firebase-applet-config.json not found!");
+    console.error("firebase-applet-config.json not found at:", configPath);
   }
 } catch (err) {
   console.error("Failed to load firebase-applet-config.json:", err);
@@ -45,11 +45,16 @@ if (firebaseConfigJson) {
 }
 
 // Initialize Midtrans
-const snap = new midtransClient.Snap({
-  isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-  serverKey: process.env.MIDTRANS_SERVER_KEY || 'dummy-key',
-  clientKey: process.env.MIDTRANS_CLIENT_KEY || 'dummy-key'
-});
+let snap: any;
+try {
+  snap = new midtransClient.Snap({
+    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+    serverKey: process.env.MIDTRANS_SERVER_KEY || 'dummy-key',
+    clientKey: process.env.MIDTRANS_CLIENT_KEY || 'dummy-key'
+  });
+} catch (err) {
+  console.error("Failed to initialize Midtrans:", err);
+}
 
 // Seed initial data if empty
 async function seedData() {
@@ -367,6 +372,10 @@ app.delete("/api/admin/social-proofs/:id", async (req, res) => {
 });
 
 // Admin Login
+app.get("/api/admin/login", (req, res) => {
+  res.json({ message: "Admin login endpoint is reachable via GET" });
+});
+
 app.post("/api/admin/login", (req, res) => {
   console.log("Login request received:", { hasBody: !!req.body, bodyKeys: Object.keys(req.body || {}) });
   const { password } = req.body;
@@ -491,6 +500,12 @@ app.post("/api/user/sync", async (req, res) => {
 // --- Server Startup ---
 
 const startServer = async () => {
+  // In Vercel, we don't call app.listen()
+  if (process.env.VERCEL) {
+    console.log("Running in Vercel environment. Skipping app.listen().");
+    return;
+  }
+
   try {
     // Vite middleware for development
     if (process.env.NODE_ENV !== "production") {
@@ -502,8 +517,8 @@ const startServer = async () => {
       app.use(vite.middlewares);
       console.log("Vite middleware integrated.");
     } else {
-      // In production, serve static files from dist
-      const distPath = path.join(__dirname, "dist");
+      // In production (Cloud Run), serve static files from dist
+      const distPath = path.join(process.cwd(), "dist");
       if (fs.existsSync(distPath)) {
         app.use(express.static(distPath));
         app.get("*", (req, res) => {
