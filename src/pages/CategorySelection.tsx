@@ -20,6 +20,8 @@ import {
   ShoppingCart
 } from "lucide-react";
 
+import { Skeleton } from "../components/ui/Skeleton";
+
 // Helper to map icon names to components
 const getIcon = (iconName: string, className: string) => {
   switch (iconName) {
@@ -65,18 +67,6 @@ export default function CategorySelection() {
     fetchProduct();
   }, [productId]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505]">
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 border-4 border-violet-500/20 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-        <p className="mt-6 text-zinc-500 font-medium tracking-widest uppercase text-xs">Memuat Detail...</p>
-      </div>
-    );
-  }
-
   if (!product) {
     return <Navigate to="/products" />;
   }
@@ -95,29 +85,61 @@ export default function CategorySelection() {
         </div>
 
         {/* Product Header */}
-        <div className="relative mb-16 p-12 rounded-[3rem] overflow-hidden border border-white/5 bg-zinc-900/20">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
-            <div className="w-32 h-32 rounded-[2rem] bg-zinc-900 border border-white/10 flex items-center justify-center shadow-2xl shadow-black/50">
-              {getIcon(product.icon, "w-16 h-16 text-violet-400")}
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold tracking-widest uppercase text-violet-400 mb-6">
-                <Zap className="w-3 h-3 fill-current" /> Paling Laris Minggu Ini
+        {loading ? (
+          <div className="relative mb-16 p-12 rounded-[3rem] overflow-hidden border border-white/5 bg-zinc-900/20">
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
+              <Skeleton className="w-32 h-32 rounded-[2rem]" />
+              <div className="flex-1 space-y-6">
+                <Skeleton className="w-48 h-8 rounded-full" />
+                <Skeleton className="w-3/4 h-16 rounded-2xl" />
+                <Skeleton className="w-full h-12 rounded-xl" />
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
-                Pilih Paket <span className="text-gradient">{product.name}.</span>
-              </h1>
-              <p className="text-xl text-zinc-400 font-light leading-relaxed max-w-2xl">
-                {product.description}
-              </p>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative mb-16 p-12 rounded-[3rem] overflow-hidden border border-white/5 bg-zinc-900/20">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
+              <div className="w-32 h-32 rounded-[2rem] bg-zinc-900 border border-white/10 flex items-center justify-center shadow-2xl shadow-black/50">
+                {getIcon(product.icon, "w-16 h-16 text-violet-400")}
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold tracking-widest uppercase text-violet-400 mb-6">
+                  <Zap className="w-3 h-3 fill-current" /> Paling Laris Minggu Ini
+                </div>
+                <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
+                  Pilih Paket <span className="text-gradient">{product.name}.</span>
+                </h1>
+                <p className="text-xl text-zinc-400 font-light leading-relaxed max-w-2xl">
+                  {product.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {product.categories.map((category, i) => (
+          {loading ? (
+            [1, 2, 3].map(i => (
+              <div key={i} className="p-10 rounded-[3rem] bg-white/5 border border-white/5 h-[500px] space-y-8">
+                <div className="flex justify-between items-center">
+                  <Skeleton className="w-32 h-10 rounded-lg" />
+                  <Skeleton className="w-10 h-10 rounded-xl" />
+                </div>
+                <Skeleton className="w-full h-20 rounded-2xl" />
+                <div className="space-y-4">
+                  <Skeleton className="w-1/2 h-6 rounded" />
+                  <Skeleton className="w-3/4 h-10 rounded-lg" />
+                </div>
+                <div className="space-y-3">
+                  {[1, 2, 3].map(j => <Skeleton key={j} className="w-full h-6 rounded" />)}
+                </div>
+                <Skeleton className="w-full h-14 rounded-2xl" />
+              </div>
+            ))
+          ) : (
+            product.categories.map((category, i) => (
             <motion.div
               key={category.id}
               initial={{ opacity: 0, y: 20 }}
@@ -179,7 +201,8 @@ export default function CategorySelection() {
                 <div className="absolute -inset-px bg-gradient-to-br from-violet-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </Link>
             </motion.div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Support Section */}

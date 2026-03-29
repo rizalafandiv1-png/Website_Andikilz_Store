@@ -201,30 +201,56 @@ export default function Checkout() {
               <p className="text-zinc-400 font-light">Pilih metode pembayaran yang paling nyaman untuk Anda.</p>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               <button
                 onClick={() => setSelectedMethod("qris")}
-                className={`w-full group relative flex items-center justify-between p-8 rounded-[2.5rem] border transition-all overflow-hidden ${
+                className={`w-full group relative flex flex-col p-8 rounded-[2.5rem] border transition-all overflow-hidden ${
                   selectedMethod === "qris" 
                     ? "bg-violet-500/10 border-violet-500/50 shadow-2xl shadow-violet-500/10" 
                     : "bg-zinc-900/20 border-white/5 hover:border-white/10"
                 }`}
               >
-                <div className="relative z-10 flex items-center gap-6">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${
-                    selectedMethod === "qris" ? "bg-violet-500 text-white" : "bg-zinc-900 text-zinc-500"
-                  }`}>
-                    <QrCode className="w-8 h-8" />
+                <div className="relative z-10 flex items-center justify-between w-full mb-6">
+                  <div className="flex items-center gap-6">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${
+                      selectedMethod === "qris" ? "bg-violet-500 text-white" : "bg-zinc-900 text-zinc-500"
+                    }`}>
+                      <QrCode className="w-8 h-8" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-black text-xl mb-1">QRIS / E-Wallet</div>
+                      <div className="text-sm text-zinc-500 font-medium">Bayar instan via aplikasi favorit Anda.</div>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <div className="font-black text-xl mb-1">QRIS</div>
-                    <div className="text-sm text-zinc-500 font-medium">Bayar instan via GoPay, OVO, Dana, LinkAja, atau Mobile Banking.</div>
+                  <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                    selectedMethod === "qris" ? "border-violet-500 bg-violet-500" : "border-zinc-800"
+                  }`}>
+                    {selectedMethod === "qris" && <CheckCircle2 className="w-5 h-5 text-white" />}
                   </div>
                 </div>
-                <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                  selectedMethod === "qris" ? "border-violet-500 bg-violet-500" : "border-zinc-800"
-                }`}>
-                  {selectedMethod === "qris" && <CheckCircle2 className="w-5 h-5 text-white" />}
+
+                {/* Payment Logos */}
+                <div className="relative z-10 flex flex-wrap gap-4 pt-6 border-t border-white/5">
+                  <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">GoPay</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">OVO</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Dana</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">ShopeePay</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">LinkAja</span>
+                  </div>
                 </div>
 
                 {selectedMethod === "qris" && (
@@ -238,8 +264,8 @@ export default function Checkout() {
                     <CreditCard className="w-8 h-8" />
                   </div>
                   <div className="text-left">
-                    <div className="font-black text-xl mb-1 text-zinc-600">Kartu Kredit / Debit</div>
-                    <div className="text-sm text-zinc-700 font-medium">Segera hadir sebagai opsi pembayaran tambahan.</div>
+                    <div className="font-black text-xl mb-1 text-zinc-600">Virtual Account</div>
+                    <div className="text-sm text-zinc-700 font-medium">BCA, Mandiri, BNI, BRI, Permata.</div>
                   </div>
                 </div>
                 <div className="px-3 py-1 rounded-full bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600">

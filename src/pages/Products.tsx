@@ -22,6 +22,8 @@ import {
   ShoppingCart
 } from "lucide-react";
 
+import { Skeleton } from "../components/ui/Skeleton";
+
 // Helper to map icon names to components
 const getIcon = (iconName: string, className: string) => {
   switch (iconName) {
@@ -81,18 +83,6 @@ export default function Products() {
     return Array.from(types);
   }, [products]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505]">
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 border-4 border-violet-500/20 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-        <p className="mt-6 text-zinc-500 font-medium tracking-widest uppercase text-xs">Memuat Katalog...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-6">
@@ -133,33 +123,56 @@ export default function Products() {
 
         {/* Categories Navigation */}
         <div className="flex items-center gap-4 mb-12 overflow-x-auto pb-4 scrollbar-hide">
-          <button
-            onClick={() => setSelectedType(null)}
-            className={`flex-none px-8 py-3.5 rounded-2xl text-sm font-bold transition-all border ${
-              selectedType === null 
-                ? "bg-white text-black border-white shadow-xl shadow-white/10" 
-                : "bg-white/5 text-zinc-400 hover:bg-white/10 border-white/5"
-            }`}
-          >
-            Semua Layanan
-          </button>
-          {productTypes.map(type => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(type)}
-              className={`flex-none px-8 py-3.5 rounded-2xl text-sm font-bold capitalize transition-all border ${
-                selectedType === type 
-                  ? "bg-violet-600 text-white border-violet-500 shadow-xl shadow-violet-600/20" 
-                  : "bg-white/5 text-zinc-400 hover:bg-white/10 border-white/5"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
+          {loading ? (
+            [1, 2, 3].map(i => <Skeleton key={i} className="w-32 h-12 rounded-2xl" />)
+          ) : (
+            <>
+              <button
+                onClick={() => setSelectedType(null)}
+                className={`flex-none px-8 py-3.5 rounded-2xl text-sm font-bold transition-all border ${
+                  selectedType === null 
+                    ? "bg-white text-black border-white shadow-xl shadow-white/10" 
+                    : "bg-white/5 text-zinc-400 hover:bg-white/10 border-white/5"
+                }`}
+              >
+                Semua Layanan
+              </button>
+              {productTypes.map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(type)}
+                  className={`flex-none px-8 py-3.5 rounded-2xl text-sm font-bold capitalize transition-all border ${
+                    selectedType === type 
+                      ? "bg-violet-600 text-white border-violet-500 shadow-xl shadow-violet-600/20" 
+                      : "bg-white/5 text-zinc-400 hover:bg-white/10 border-white/5"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <div key={i} className="p-6 rounded-[2.5rem] bg-white/5 border border-white/5 h-[320px] space-y-6">
+                <Skeleton className="w-16 h-16 rounded-2xl" />
+                <Skeleton className="w-3/4 h-8 rounded-lg" />
+                <Skeleton className="w-full h-12 rounded-lg" />
+                <div className="pt-6 border-t border-white/5 flex justify-between items-end">
+                  <div className="space-y-2">
+                    <Skeleton className="w-16 h-4 rounded" />
+                    <Skeleton className="w-24 h-6 rounded" />
+                  </div>
+                  <Skeleton className="w-10 h-10 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence mode="popLayout">
               {filteredProducts.map((product, i) => {

@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Zap, Shield, MonitorPlay, CreditCard, Mail, ArrowRight, Star, Users, CheckCircle2, Globe } from "lucide-react";
+import { Zap, Shield, MonitorPlay, CreditCard, Mail, ArrowRight, Star, Users, CheckCircle2, Globe, ChevronRight } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -157,6 +157,84 @@ export default function Landing() {
                 <div className="text-4xl md:text-5xl font-bold mb-2 text-white">{stat.value}</div>
                 <div className="text-sm text-zinc-500 uppercase tracking-widest font-semibold">{stat.label}</div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">Apa Kata Mereka?</h2>
+            <p className="text-xl text-zinc-400 max-w-2xl mx-auto font-light">Kepuasan pelanggan adalah prioritas utama kami.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { name: "Rizky Pratama", role: "Freelancer", text: "Prosesnya bener-bener instan! Gak sampe 5 menit akun Netflix udah aktif. Rekomen banget buat yang gak mau ribet.", rating: 5 },
+              { name: "Siti Aminah", role: "Mahasiswa", text: "Harganya paling murah dibanding toko sebelah, tapi kualitasnya tetep premium. CS-nya juga ramah banget pas nanya-nanya.", rating: 5 },
+              { name: "Budi Santoso", role: "Designer", text: "Udah langganan Adobe Creative Cloud di sini selama 6 bulan, gak pernah ada kendala. Garansinya beneran aman.", rating: 5 }
+            ].map((item, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="p-8 rounded-[2.5rem] glass border-white/5 relative group"
+              >
+                <div className="flex gap-1 mb-6">
+                  {[...Array(item.rating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-amber-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-zinc-300 mb-8 italic leading-relaxed">"{item.text}"</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center font-bold text-white">
+                    {item.name[0]}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white">{item.name}</h4>
+                    <p className="text-xs text-zinc-500">{item.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-32 bg-zinc-900/10">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">Pertanyaan Umum</h2>
+            <p className="text-xl text-zinc-400 font-light">Semua yang perlu Anda ketahui tentang layanan kami.</p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              { q: "Berapa lama proses pengiriman akun?", a: "Sistem kami bekerja secara otomatis. Setelah pembayaran terverifikasi, detail akun akan dikirimkan dalam waktu 1-5 menit melalui WhatsApp atau Email." },
+              { q: "Apakah akun yang dijual legal dan aman?", a: "Ya, semua akun yang kami sediakan adalah akun premium resmi. Kami menjamin keamanan data dan privasi Anda selama berlangganan." },
+              { q: "Bagaimana jika akun mengalami kendala?", a: "Kami memberikan garansi penuh sesuai durasi paket yang Anda beli. Jika ada kendala, silakan hubungi CS kami melalui WhatsApp untuk klaim garansi." },
+              { q: "Metode pembayaran apa saja yang tersedia?", a: "Kami mendukung berbagai metode pembayaran populer di Indonesia, termasuk QRIS (Dana, OVO, GoPay, LinkAja) dan Transfer Bank." }
+            ].map((faq, i) => (
+              <motion.details 
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="group p-6 rounded-3xl glass border-white/5 cursor-pointer"
+              >
+                <summary className="flex items-center justify-between font-bold text-lg list-none">
+                  {faq.q}
+                  <ChevronRight className="w-5 h-5 text-zinc-500 group-open:rotate-90 transition-transform" />
+                </summary>
+                <p className="mt-4 text-zinc-400 leading-relaxed font-light">
+                  {faq.a}
+                </p>
+              </motion.details>
             ))}
           </div>
         </div>
