@@ -277,6 +277,85 @@ app.delete("/api/admin/categories/:id", async (req, res) => {
   }
 });
 
+// Get recent successful orders (Public - Anonymized)
+app.get("/api/public/recent-orders", async (req, res) => {
+  try {
+    // Get real orders
+    const qOrders = query(
+      collection(db, "orders"), 
+      where("status", "==", "Selesai"),
+      orderBy("date", "desc"), 
+      limit(5)
+    );
+    const ordersSnap = await getDocs(qOrders);
+    const realOrders = ordersSnap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: data.id,
+        name: "Seseorang", // Anonymized
+        product_name: data.product_name,
+        category_name: data.category_name,
+        date: data.date,
+        location: "Indonesia",
+        type: "real"
+      };
+    });
+
+    // Get manual social proofs
+    const qProofs = query(
+      collection(db, "social_proofs"),
+      orderBy("timestamp", "desc"),
+      limit(5)
+    );
+    const proofsSnap = await getDocs(qProofs);
+    const manualProofs = proofsSnap.docs.map(doc => ({
+      ...doc.data(),
+      type: "manual"
+    }));
+
+    // Combine and sort by date/timestamp
+    const combined = [...realOrders, ...manualProofs].sort((a: any, b: any) => {
+      const dateA = new Date(a.date || a.timestamp).getTime();
+      const dateB = new Date(b.date || b.timestamp).getTime();
+      return dateB - dateA;
+    });
+
+    res.json(combined.slice(0, 10));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Social Proofs Management (Admin)
+app.get("/api/admin/social-proofs", async (req, res) => {
+  try {
+    const proofsSnap = await getDocs(query(collection(db, "social_proofs"), orderBy("timestamp", "desc")));
+    res.json(proofsSnap.docs.map(doc => doc.data()));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/admin/social-proofs", async (req, res) => {
+  const { id, name, location, product_name, category_name, timestamp } = req.body;
+  try {
+    await setDoc(doc(db, "social_proofs", id), { id, name, location, product_name, category_name, timestamp });
+    res.status(201).json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete("/api/admin/social-proofs/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await deleteDoc(doc(db, "social_proofs", id));
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Admin Login
 app.post("/api/admin/login", (req, res) => {
   const { password } = req.body;

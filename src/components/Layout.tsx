@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { motion } from "motion/react";
+import SocialProof from "./SocialProof";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -98,6 +99,8 @@ export default function Layout() {
       <main className="flex-1">
         <Outlet />
       </main>
+
+      <SocialProof />
 
       {/* Footer */}
       <footer className="pt-24 pb-12 bg-[#050505] border-t border-white/5">

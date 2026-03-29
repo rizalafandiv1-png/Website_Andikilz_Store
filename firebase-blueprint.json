@@ -56,6 +56,20 @@
         "zone_id": { "type": "string" }
       },
       "required": ["id", "user_id", "product_name", "category_name", "price", "date"]
+    },
+    "SocialProof": {
+      "title": "SocialProof",
+      "description": "Manual social proof notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "product_name": { "type": "string" },
+        "category_name": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "name", "location", "product_name", "category_name", "timestamp"]
     }
   },
   "firestore": {
@@ -74,6 +88,10 @@
     "orders/{orderId}": {
       "schema": "Order",
       "description": "Customer orders"
+    },
+    "social_proofs/{proofId}": {
+      "schema": "SocialProof",
+      "description": "Manual social proofs"
     }
   }
 }

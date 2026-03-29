@@ -12,7 +12,10 @@ import {
   Filter,
   RefreshCw,
   LogOut,
-  Plus
+  Plus,
+  Bell,
+  MapPin,
+  Calendar
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { useNavigate, Navigate } from "react-router-dom";
@@ -29,10 +32,20 @@ interface Order {
   zone_id: string;
 }
 
+interface SocialProof {
+  id: string;
+  name: string;
+  location: string;
+  product_name: string;
+  category_name: string;
+  timestamp: string;
+}
+
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"orders" | "products">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "social-proof">("orders");
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [socialProofs, setSocialProofs] = useState<SocialProof[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Semua");
@@ -47,11 +60,30 @@ export default function AdminDashboard() {
       if (activeTab === "orders") {
         const response = await fetch("/api/orders");
         const data = await response.json();
-        setOrders(data);
-      } else {
+        if (Array.isArray(data)) {
+          setOrders(data);
+        } else {
+          console.error("Orders data is not an array:", data);
+          setOrders([]);
+        }
+      } else if (activeTab === "products") {
         const response = await fetch("/api/admin/products");
         const data = await response.json();
-        setProducts(data);
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error("Products data is not an array:", data);
+          setProducts([]);
+        }
+      } else if (activeTab === "social-proof") {
+        const response = await fetch("/api/admin/social-proofs");
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setSocialProofs(data);
+        } else {
+          console.error("Social proofs data is not an array:", data);
+          setSocialProofs([]);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -83,7 +115,46 @@ export default function AdminDashboard() {
     popular: false 
   });
 
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'product' | 'category' | 'order', id: string } | null>(null);
+  const [isAddingProof, setIsAddingProof] = useState(false);
+  const [newProof, setNewProof] = useState({
+    name: "",
+    location: "Indonesia",
+    product_name: "",
+    category_name: ""
+  });
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'product' | 'category' | 'order' | 'proof', id: string } | null>(null);
+
+  const handleAddProof = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const proofId = `proof-${Date.now()}`;
+    try {
+      const response = await fetch("/api/admin/social-proofs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newProof, id: proofId, timestamp: new Date().toISOString() }),
+      });
+      if (response.ok) {
+        setIsAddingProof(false);
+        setNewProof({ name: "", location: "Indonesia", product_name: "", category_name: "" });
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Failed to add proof:", error);
+    }
+  };
+
+  const deleteProof = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/social-proofs/${id}`, { method: "DELETE" });
+      if (response.ok) {
+        setDeleteConfirm(null);
+        fetchData();
+      }
+    } catch (error) {
+      console.error("Failed to delete proof:", error);
+    }
+  };
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +262,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (response.ok) {
-        setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        setOrders(prev => Array.isArray(prev) ? prev.map(o => o.id === id ? { ...o, status: newStatus } : o) : []);
       }
     } catch (error) {
       console.error("Failed to update status:", error);
@@ -205,7 +276,7 @@ export default function AdminDashboard() {
       });
       if (response.ok) {
         setDeleteConfirm(null);
-        setOrders(orders.filter(o => o.id !== id));
+        setOrders(prev => Array.isArray(prev) ? prev.filter(o => o.id !== id) : []);
       }
     } catch (error) {
       console.error("Failed to delete order:", error);
@@ -245,10 +316,12 @@ export default function AdminDashboard() {
       deleteCategory(deleteConfirm.id);
     } else if (deleteConfirm.type === 'order') {
       deleteOrder(deleteConfirm.id);
+    } else if (deleteConfirm.type === 'proof') {
+      deleteProof(deleteConfirm.id);
     }
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -478,6 +551,12 @@ export default function AdminDashboard() {
         >
           Produk & Harga
         </button>
+        <button 
+          onClick={() => setActiveTab("social-proof")}
+          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === "social-proof" ? "bg-white text-black" : "text-zinc-500 hover:text-white"}`}
+        >
+          Social Proof
+        </button>
       </div>
 
       {activeTab === "orders" ? (
@@ -485,10 +564,10 @@ export default function AdminDashboard() {
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {[
-              { label: "Total Pesanan", value: orders.length, icon: Package, color: "text-blue-400" },
-              { label: "Menunggu", value: orders.filter(o => o.status === "Menunggu").length, icon: Clock, color: "text-amber-400" },
-              { label: "Dalam Proses", value: orders.filter(o => o.status === "Proses").length, icon: RefreshCw, color: "text-blue-400" },
-              { label: "Selesai", value: orders.filter(o => o.status === "Selesai").length, icon: CheckCircle2, color: "text-emerald-400" },
+              { label: "Total Pesanan", value: (Array.isArray(orders) ? orders : []).length, icon: Package, color: "text-blue-400" },
+              { label: "Menunggu", value: (Array.isArray(orders) ? orders : []).filter(o => o.status === "Menunggu").length, icon: Clock, color: "text-amber-400" },
+              { label: "Dalam Proses", value: (Array.isArray(orders) ? orders : []).filter(o => o.status === "Proses").length, icon: RefreshCw, color: "text-blue-400" },
+              { label: "Selesai", value: (Array.isArray(orders) ? orders : []).filter(o => o.status === "Selesai").length, icon: CheckCircle2, color: "text-emerald-400" },
             ].map((stat, i) => (
               <div key={i} className="p-6 rounded-2xl bg-[#0a0a0a] border border-white/5">
                 <div className="flex items-center justify-between mb-4">
@@ -625,6 +704,115 @@ export default function AdminDashboard() {
             </div>
           </div>
         </>
+      ) : activeTab === "social-proof" ? (
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Manual Social Proof</h2>
+            <Button onClick={() => setIsAddingProof(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Social Proof
+            </Button>
+          </div>
+
+          {isAddingProof && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-zinc-900 border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl"
+              >
+                <h2 className="text-2xl font-bold mb-6">Tambah Social Proof</h2>
+                <form onSubmit={handleAddProof} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Nama Pembeli</label>
+                    <input
+                      type="text"
+                      required
+                      value={newProof.name}
+                      onChange={(e) => setNewProof({ ...newProof, name: e.target.value })}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                      placeholder="Contoh: Budi"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Lokasi</label>
+                    <input
+                      type="text"
+                      required
+                      value={newProof.location}
+                      onChange={(e) => setNewProof({ ...newProof, location: e.target.value })}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                      placeholder="Contoh: Jakarta"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Produk</label>
+                    <input
+                      type="text"
+                      required
+                      value={newProof.product_name}
+                      onChange={(e) => setNewProof({ ...newProof, product_name: e.target.value })}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                      placeholder="Contoh: Netflix Premium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">Paket</label>
+                    <input
+                      type="text"
+                      required
+                      value={newProof.category_name}
+                      onChange={(e) => setNewProof({ ...newProof, category_name: e.target.value })}
+                      className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 focus:border-violet-500 outline-none transition-all"
+                      placeholder="Contoh: 1 Bulan"
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button type="button" onClick={() => setIsAddingProof(false)} variant="outline" className="flex-1 rounded-xl">Batal</Button>
+                    <Button type="submit" className="flex-1 bg-violet-500 hover:bg-violet-600 rounded-xl">Simpan</Button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {socialProofs.map((proof) => (
+              <div key={proof.id} className="p-6 rounded-2xl bg-[#0a0a0a] border border-white/5 relative group">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                    <Bell className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white truncate">{proof.name}</div>
+                    <div className="flex items-center gap-1 text-xs text-zinc-500">
+                      <MapPin className="w-3 h-3" />
+                      {proof.location}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setDeleteConfirm({ type: 'proof', id: proof.id })}
+                    className="p-2 rounded-lg hover:bg-rose-500/10 hover:text-rose-400 text-zinc-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm text-zinc-300">
+                    Membeli <span className="font-bold text-white">{proof.product_name}</span>
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    Paket: {proof.category_name}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-zinc-600 pt-2 border-t border-white/5">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(proof.timestamp).toLocaleString('id-ID')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : (
         <div className="space-y-8">
           <div className="flex items-center justify-between">
