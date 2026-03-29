@@ -16,13 +16,26 @@ export default function AdminLogin() {
     setError("");
 
     try {
+      // Test health check first
+      try {
+        const healthCheck = await fetch("/api/health");
+        if (!healthCheck.ok) console.warn("Health check failed, but continuing login attempt...");
+      } catch (hErr) {
+        console.error("Health check network error:", hErr);
+      }
+
       const response = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        throw new Error("Server returned non-JSON response");
+      }
 
       if (response.ok) {
         localStorage.setItem("adminToken", data.token);
@@ -30,8 +43,11 @@ export default function AdminLogin() {
       } else {
         setError(data.error || "Login gagal");
       }
-    } catch (err) {
-      setError("Terjadi kesalahan koneksi");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message === "Server returned non-JSON response" 
+        ? "Kesalahan server (500)" 
+        : "Terjadi kesalahan koneksi");
     } finally {
       setLoading(false);
     }

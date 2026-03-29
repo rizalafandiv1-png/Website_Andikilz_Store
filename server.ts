@@ -53,7 +53,17 @@ const snap = new midtransClient.Snap({
 
 // Seed initial data if empty
 async function seedData() {
+  if (!db) {
+    console.error("Firestore database not initialized. Check firebase-applet-config.json.");
+    return;
+  }
+
   try {
+    console.log("Testing Firestore connection...");
+    // Try to get a single document to test connection
+    await getDocs(query(collection(db, "products"), limit(1)));
+    console.log("Firestore connection test successful.");
+
     const productsSnap = await getDocs(collection(db, "products"));
     if (productsSnap.empty) {
       console.log("Seeding initial data to Firestore...");
@@ -358,12 +368,15 @@ app.delete("/api/admin/social-proofs/:id", async (req, res) => {
 
 // Admin Login
 app.post("/api/admin/login", (req, res) => {
+  console.log("Login request received:", { hasBody: !!req.body, bodyKeys: Object.keys(req.body || {}) });
   const { password } = req.body;
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
   
   if (password === adminPassword) {
+    console.log("Login successful");
     res.json({ success: true, token: "admin-session-token-" + Date.now() });
   } else {
+    console.log("Login failed: Incorrect password");
     res.status(401).json({ error: "Password salah" });
   }
 });
@@ -479,14 +492,9 @@ app.post("/api/user/sync", async (req, res) => {
 
 const startServer = async () => {
   try {
-    // Listen first to ensure the port is open
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://0.0.0.0:${PORT}`);
-      console.log(`Admin password is: ${process.env.ADMIN_PASSWORD || "admin123"}`);
-    });
-
     // Vite middleware for development
     if (process.env.NODE_ENV !== "production") {
+      console.log("Initializing Vite server...");
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
@@ -495,11 +503,25 @@ const startServer = async () => {
       console.log("Vite middleware integrated.");
     } else {
       // In production, serve static files from dist
-      app.use(express.static(path.join(__dirname, "dist")));
-      app.get("*", (req, res) => {
-        res.sendFile(path.join(__dirname, "dist", "index.html"));
-      });
+      const distPath = path.join(__dirname, "dist");
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath));
+        app.get("*", (req, res) => {
+          res.sendFile(path.join(distPath, "index.html"));
+        });
+      } else {
+        console.warn("Production build (dist/) not found. Static serving skipped.");
+      }
     }
+
+    // Start listening
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      const address = server.address();
+      const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + address?.port;
+      console.log(`Server listening on ${bind}`);
+      console.log(`Admin password is: ${process.env.ADMIN_PASSWORD || "admin123"}`);
+      console.log(`Health check: http://0.0.0.0:${PORT}/api/health`);
+    });
   } catch (error) {
     console.error("Failed to start server:", error);
   }
