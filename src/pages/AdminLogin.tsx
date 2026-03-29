@@ -36,10 +36,14 @@ export default function AdminLogin() {
         body: JSON.stringify({ password }),
       });
 
+      console.log("Login response status:", response.status);
+      
       let data;
+      const responseText = await response.text();
       try {
-        data = await response.json();
+        data = JSON.parse(responseText);
       } catch (jsonErr) {
+        console.error("Failed to parse JSON response:", responseText);
         throw new Error("Server returned non-JSON response");
       }
 

@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import { initializeFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
 // @ts-ignore
 import midtransClient from 'midtrans-client';
 
@@ -18,6 +18,13 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logger
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -27,11 +34,26 @@ app.get("/api/health", (req, res) => {
 // Load Firebase Config safely
 let firebaseConfigJson;
 try {
-  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-  if (fs.existsSync(configPath)) {
+  // Try multiple paths for Vercel/Cloud Run compatibility
+  const paths = [
+    path.join(process.cwd(), "firebase-applet-config.json"),
+    path.join(__dirname, "firebase-applet-config.json"),
+    path.join(__dirname, "..", "firebase-applet-config.json")
+  ];
+  
+  let configPath = "";
+  for (const p of paths) {
+    if (fs.existsSync(p)) {
+      configPath = p;
+      break;
+    }
+  }
+
+  if (configPath) {
+    console.log("Loading firebase-applet-config.json from:", configPath);
     firebaseConfigJson = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   } else {
-    console.error("firebase-applet-config.json not found at:", configPath);
+    console.error("firebase-applet-config.json not found in any of the expected paths.");
   }
 } catch (err) {
   console.error("Failed to load firebase-applet-config.json:", err);
@@ -41,7 +63,9 @@ try {
 let db: any;
 if (firebaseConfigJson) {
   const firebaseApp = initializeApp(firebaseConfigJson);
-  db = getFirestore(firebaseApp, firebaseConfigJson.firestoreDatabaseId);
+  db = initializeFirestore(firebaseApp, {
+    experimentalForceLongPolling: true,
+  }, firebaseConfigJson.firestoreDatabaseId);
 }
 
 // Initialize Midtrans
@@ -377,9 +401,21 @@ app.get("/api/admin/login", (req, res) => {
 });
 
 app.post("/api/admin/login", (req, res) => {
-  console.log("Login request received:", { hasBody: !!req.body, bodyKeys: Object.keys(req.body || {}) });
+  console.log("Login request received:", { 
+    hasBody: !!req.body, 
+    bodyKeys: Object.keys(req.body || {}),
+    contentType: req.headers["content-type"]
+  });
+  
   const { password } = req.body;
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+  
+  // Log password info for debugging (safely)
+  console.log("Password check:", {
+    inputLength: password?.length || 0,
+    expectedLength: adminPassword.length,
+    match: password === adminPassword
+  });
   
   if (password === adminPassword) {
     console.log("Login successful");
