@@ -80,7 +80,9 @@ if (firebaseConfigJson) {
 }
 
 // Admin Emails
-const ADMIN_EMAILS = ["rizalafandiv1@gmail.com"];
+const ADMIN_EMAILS = process.env.ADMIN_EMAILS 
+  ? process.env.ADMIN_EMAILS.split(",").map(e => e.trim()) 
+  : ["rizalafandiv1@gmail.com"];
 
 // Admin Authentication Middleware
 const authenticateAdmin = async (req: any, res: any, next: any) => {
@@ -98,11 +100,22 @@ const authenticateAdmin = async (req: any, res: any, next: any) => {
   }
 
   try {
+    // Ensure admin is initialized
+    if (!admin.apps.length) {
+      console.warn("Firebase Admin not initialized, attempting to initialize...");
+      if (firebaseConfigJson) {
+        admin.initializeApp({
+          projectId: firebaseConfigJson.projectId,
+        });
+      }
+    }
+    
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     if (ADMIN_EMAILS.includes(decodedToken.email || "")) {
       req.admin = decodedToken;
       next();
     } else {
+      console.warn(`Access denied for non-admin email: ${decodedToken.email}`);
       res.status(403).json({ error: "Forbidden: Not an admin" });
     }
   } catch (error: any) {

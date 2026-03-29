@@ -18,33 +18,33 @@ service cloud.firestore {
 
     // User Profiles
     match /users/{userId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
     // Products & Categories
     match /products/{productId} {
       allow read: if true;
-      allow write: if true; // Temporarily allow for seeding
+      allow write: if isAdmin();
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if true; // Temporarily allow for seeding
+      allow write: if isAdmin();
     }
 
     // Orders
     match /orders/{orderId} {
-      allow read: if true;
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.user_id == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Social Proofs
     match /social_proofs/{proofId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
   }
 }
