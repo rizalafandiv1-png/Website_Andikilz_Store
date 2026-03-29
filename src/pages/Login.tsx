@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate, Link } from "react-router-dom";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendEmailVerification, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { Button } from "../components/ui/Button";
-import { LogIn, Mail, Lock, Chrome } from "lucide-react";
+import { LogIn, Mail, Lock, Chrome, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [unverified, setUnverified] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -17,14 +20,41 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setUnverified(false);
+    setResendSuccess(false);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user.emailVerified) {
+        setUnverified(true);
+        setError("Email Anda belum diverifikasi.");
+        // We don't sign out immediately so they can resend the email if needed
+        // But we won't navigate to home
+        return;
+      }
+      
       navigate("/");
     } catch (err: any) {
       setError("Email atau password salah.");
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!auth.currentUser) return;
+    setResending(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setResendSuccess(true);
+      // After resending, we can sign out to be safe
+      setTimeout(() => signOut(auth), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Gagal mengirim ulang email verifikasi.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -54,8 +84,26 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-sm mb-6">
-            {error}
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-sm mb-6 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {unverified && !resendSuccess && (
+              <button 
+                onClick={handleResendVerification}
+                disabled={resending}
+                className="text-xs font-bold text-violet-400 hover:text-violet-300 flex items-center gap-1.5 w-fit"
+              >
+                {resending ? <RefreshCw className="w-3 h-3 animate-spin" /> : null}
+                Kirim Ulang Email Verifikasi
+              </button>
+            )}
+            {resendSuccess && (
+              <div className="text-xs font-bold text-emerald-400">
+                Email verifikasi telah dikirim ulang!
+              </div>
+            )}
           </div>
         )}
 

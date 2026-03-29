@@ -15,10 +15,28 @@ import {
   Plus,
   Bell,
   MapPin,
-  Calendar
+  Calendar,
+  TrendingUp,
+  DollarSign,
+  Users,
+  ShoppingCart
 } from "lucide-react";
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell
+} from 'recharts';
 import { Button } from "../components/ui/Button";
 import { useNavigate, Navigate } from "react-router-dom";
+import { auth } from "../firebase";
+import { signOut } from "firebase/auth";
 
 interface Order {
   id: string;
@@ -42,7 +60,7 @@ interface SocialProof {
 }
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "social-proof">("orders");
+  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "products" | "social-proof">("overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [socialProofs, setSocialProofs] = useState<SocialProof[]>([]);
@@ -57,34 +75,31 @@ export default function AdminDashboard() {
     if (!adminToken) return;
     setLoading(true);
     try {
-      if (activeTab === "orders") {
-        const response = await fetch("/api/orders");
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setOrders(data);
-        } else {
-          console.error("Orders data is not an array:", data);
-          setOrders([]);
-        }
-      } else if (activeTab === "products") {
-        const response = await fetch("/api/admin/products");
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else {
-          console.error("Products data is not an array:", data);
-          setProducts([]);
-        }
-      } else if (activeTab === "social-proof") {
-        const response = await fetch("/api/admin/social-proofs");
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setSocialProofs(data);
-        } else {
-          console.error("Social proofs data is not an array:", data);
-          setSocialProofs([]);
-        }
+      // Fetch all data regardless of active tab for overview
+      const [ordersRes, productsRes, proofsRes] = await Promise.all([
+        fetch("/api/orders", {
+          headers: { "Authorization": `Bearer ${adminToken}` }
+        }),
+        fetch("/api/admin/products", {
+          headers: { "Authorization": `Bearer ${adminToken}` }
+        }),
+        fetch("/api/admin/social-proofs", {
+          headers: { "Authorization": `Bearer ${adminToken}` }
+        })
+      ]);
+
+      if (ordersRes.status === 401 || productsRes.status === 401 || proofsRes.status === 401) {
+        handleLogout();
+        return;
       }
+
+      const ordersData = await ordersRes.json();
+      const productsData = await productsRes.json();
+      const proofsData = await proofsRes.json();
+
+      if (Array.isArray(ordersData)) setOrders(ordersData);
+      if (Array.isArray(productsData)) setProducts(productsData);
+      if (Array.isArray(proofsData)) setSocialProofs(proofsData);
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
@@ -131,7 +146,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch("/api/admin/social-proofs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ ...newProof, id: proofId, timestamp: new Date().toISOString() }),
       });
       if (response.ok) {
@@ -146,7 +164,10 @@ export default function AdminDashboard() {
 
   const deleteProof = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/social-proofs/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/social-proofs/${id}`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${adminToken}` }
+      });
       if (response.ok) {
         setDeleteConfirm(null);
         fetchData();
@@ -162,7 +183,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch("/api/admin/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ ...newProduct, id: productId }),
       });
       if (response.ok) {
@@ -180,7 +204,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/products/${editingProduct.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`
+        },
         body: JSON.stringify(editingProduct),
       });
       if (response.ok) {
@@ -201,7 +228,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch("/api/admin/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`
+        },
         body: JSON.stringify({
           id: categoryId,
           product_id: selectedProductId,
@@ -225,7 +255,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/categories/${editingCategory.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`
+        },
         body: JSON.stringify({
           ...editingCategory,
           price: parseInt(editingCategory.price),
@@ -248,9 +281,17 @@ export default function AdminDashboard() {
     return <Navigate to="/admin/login" />;
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    navigate("/admin/login");
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem("adminToken");
+      navigate("/admin/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Fallback
+      localStorage.removeItem("adminToken");
+      navigate("/admin/login");
+    }
   };
 
   // --- Order Actions ---
@@ -258,7 +299,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/orders/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       if (response.ok) {
@@ -273,6 +317,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/orders/${id}`, {
         method: "DELETE",
+        headers: { "Authorization": `Bearer ${adminToken}` }
       });
       if (response.ok) {
         setDeleteConfirm(null);
@@ -286,7 +331,10 @@ export default function AdminDashboard() {
   // --- Product Actions ---
   const deleteProduct = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/products/${id}`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${adminToken}` }
+      });
       if (response.ok) {
         setDeleteConfirm(null);
         fetchData();
@@ -298,7 +346,10 @@ export default function AdminDashboard() {
 
   const deleteCategory = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/admin/categories/${id}`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${adminToken}` }
+      });
       if (response.ok) {
         setDeleteConfirm(null);
         fetchData();
@@ -332,6 +383,45 @@ export default function AdminDashboard() {
     return matchesSearch && matchesStatus;
   });
 
+  // --- Data Processing for Charts ---
+  const getChartData = () => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return d.toISOString().split('T')[0];
+    }).reverse();
+
+    return last7Days.map(date => {
+      const dayOrders = orders.filter(o => o.date.startsWith(date) && o.status === "Selesai");
+      const revenue = dayOrders.reduce((sum, o) => sum + o.price, 0);
+      const count = dayOrders.length;
+      
+      return {
+        date: new Date(date).toLocaleDateString('id-ID', { weekday: 'short' }),
+        revenue,
+        orders: count
+      };
+    });
+  };
+
+  const getProductStats = () => {
+    const stats: Record<string, number> = {};
+    orders.filter(o => o.status === "Selesai").forEach(o => {
+      stats[o.product_name] = (stats[o.product_name] || 0) + o.price;
+    });
+    return Object.entries(stats)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  };
+
+  const totalRevenue = orders
+    .filter(o => o.status === "Selesai")
+    .reduce((sum, o) => sum + o.price, 0);
+
+  const pendingOrders = orders.filter(o => o.status === "Menunggu").length;
+  const completedOrders = orders.filter(o => o.status === "Selesai").length;
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Selesai": return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
@@ -341,6 +431,9 @@ export default function AdminDashboard() {
       default: return "text-zinc-400 bg-zinc-400/10 border-zinc-400/20";
     }
   };
+
+  const chartData = getChartData();
+  const productStats = getProductStats();
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
@@ -540,6 +633,12 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div className="flex gap-2 p-1 bg-[#0a0a0a] border border-white/5 rounded-2xl mb-8 w-fit">
         <button 
+          onClick={() => setActiveTab("overview")}
+          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === "overview" ? "bg-white text-black" : "text-zinc-500 hover:text-white"}`}
+        >
+          Ringkasan
+        </button>
+        <button 
           onClick={() => setActiveTab("orders")}
           className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === "orders" ? "bg-white text-black" : "text-zinc-500 hover:text-white"}`}
         >
@@ -559,7 +658,151 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {activeTab === "orders" ? (
+      {activeTab === "overview" ? (
+        <div className="space-y-8">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: "Total Pendapatan", value: `Rp ${totalRevenue.toLocaleString('id-ID')}`, icon: DollarSign, color: "text-emerald-400", bg: "bg-emerald-400/10" },
+              { label: "Pesanan Selesai", value: completedOrders, icon: CheckCircle2, color: "text-blue-400", bg: "bg-blue-400/10" },
+              { label: "Menunggu Proses", value: pendingOrders, icon: Clock, color: "text-amber-400", bg: "bg-amber-400/10" },
+              { label: "Total Produk", value: products.length, icon: Package, color: "text-violet-400", bg: "bg-violet-400/10" },
+            ].map((stat, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="p-6 rounded-3xl bg-[#0a0a0a] border border-white/5 relative overflow-hidden group"
+              >
+                <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} blur-3xl -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500`} />
+                <div className="relative z-10">
+                  <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center mb-4`}>
+                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+                  <div className="text-sm text-zinc-500">{stat.label}</div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Revenue Chart */}
+            <div className="lg:col-span-2 p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Tren Pendapatan</h3>
+                  <p className="text-sm text-zinc-500">Pendapatan harian dalam 7 hari terakhir</p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  +12.5%
+                </div>
+              </div>
+              
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#71717a" 
+                      fontSize={12} 
+                      tickLine={false} 
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="#71717a" 
+                      fontSize={12} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tickFormatter={(value) => `Rp ${value >= 1000 ? (value/1000) + 'k' : value}`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                      itemStyle={{ color: '#fff' }}
+                      formatter={(value: any) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#8b5cf6" 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#colorRev)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Top Products */}
+            <div className="p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
+              <h3 className="text-lg font-bold text-white mb-6">Produk Terlaris</h3>
+              <div className="space-y-6">
+                {productStats.length > 0 ? productStats.map((product, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-white/5 flex items-center justify-center text-xs font-bold text-zinc-500">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-white truncate">{product.name}</div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full mt-2 overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(product.value / productStats[0].value) * 100}%` }}
+                          className="h-full bg-violet-500 rounded-full"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-zinc-400">
+                      Rp {(product.value / 1000).toFixed(0)}k
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-12 text-zinc-500 text-sm">
+                    Belum ada data penjualan.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="p-8 rounded-3xl bg-[#0a0a0a] border border-white/5">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-lg font-bold text-white">Aktivitas Terbaru</h3>
+              <Button variant="outline" size="sm" onClick={() => setActiveTab("orders")} className="text-xs border-white/5">Lihat Semua</Button>
+            </div>
+            <div className="space-y-6">
+              {orders.slice(0, 5).map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(order.status)}`}>
+                      <ShoppingCart className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-white">{order.product_name}</div>
+                      <div className="text-xs text-zinc-500">{order.id} • {new Date(order.date).toLocaleDateString('id-ID')}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-white">Rp {order.price.toLocaleString('id-ID')}</div>
+                    <div className={`text-[10px] font-bold uppercase ${getStatusColor(order.status).split(' ')[0]}`}>{order.status}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : activeTab === "orders" ? (
         <>
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">

@@ -20,7 +20,8 @@ import {
   Flame,
   Smartphone,
   Tv,
-  Music
+  Music,
+  AlertTriangle
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -94,6 +95,11 @@ export default function Checkout() {
   const handleContinue = async () => {
     if (!user) {
       navigate("/login", { state: { from: window.location.pathname + window.location.search } });
+      return;
+    }
+
+    if (!user.emailVerified) {
+      alert("Silakan verifikasi email Anda terlebih dahulu sebelum melakukan pembelian.");
       return;
     }
 
@@ -328,9 +334,15 @@ export default function Checkout() {
               </div>
 
               <div className="relative z-10">
+                {user && !user.emailVerified && (
+                  <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold leading-relaxed flex items-start gap-3">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Email Anda belum diverifikasi. Silakan verifikasi email Anda melalui banner di atas sebelum melakukan pembayaran.</span>
+                  </div>
+                )}
                 <Button 
                   onClick={handleContinue}
-                  disabled={!selectedMethod || creatingOrder}
+                  disabled={!selectedMethod || creatingOrder || (user && !user.emailVerified)}
                   size="lg" 
                   className="w-full rounded-2xl h-20 text-xl font-black bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-900 disabled:text-zinc-700 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-white/5"
                 >

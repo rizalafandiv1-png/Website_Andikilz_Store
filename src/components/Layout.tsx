@@ -15,14 +15,17 @@ import {
   X,
   MessageCircle,
   Zap,
-  LayoutDashboard
+  LayoutDashboard,
+  AlertTriangle,
+  Mail
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { signOut } from "firebase/auth";
+import { signOut, sendEmailVerification } from "firebase/auth";
 import { auth } from "../firebase";
 import { motion, AnimatePresence } from "motion/react";
 import SocialProof from "./SocialProof";
 import { useState, useEffect } from "react";
+import { Button } from "./ui/Button";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -30,6 +33,8 @@ export default function Layout() {
   const { user, loading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -47,13 +52,67 @@ export default function Layout() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!user) return;
+    setResending(true);
+    try {
+      await sendEmailVerification(user);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (err) {
+      console.error("Failed to resend verification:", err);
+    } finally {
+      setResending(false);
+    }
+  };
+
   const isActive = (path: string) => location.pathname === path;
+
+  const showVerificationBanner = user && !user.emailVerified;
 
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-50 selection:bg-violet-500/30 font-sans flex flex-col">
+      {/* Verification Banner */}
+      <AnimatePresence>
+        {showVerificationBanner && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-amber-500/10 border-b border-amber-500/20 relative z-[60]"
+          >
+            <div className="max-w-7xl mx-auto px-6 py-3 flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
+              <div className="flex items-center gap-2 text-amber-400 text-sm font-medium">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Email Anda belum diverifikasi. Silakan periksa kotak masuk Anda.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-all"
+                >
+                  Sudah Verifikasi?
+                </button>
+                <button 
+                  onClick={handleResendVerification}
+                  disabled={resending || resendSuccess}
+                  className={`text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-lg border transition-all ${
+                    resendSuccess 
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                      : 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
+                  }`}
+                >
+                  {resending ? 'Mengirim...' : resendSuccess ? 'Terkirim!' : 'Kirim Ulang Link'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navigation */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 pt-6 px-6 ${scrolled ? 'pt-4' : 'pt-6'}`}>
-        <div className={`max-w-7xl mx-auto glass rounded-[2rem] px-8 h-20 flex items-center justify-between shadow-2xl transition-all duration-500 border-white/10 ${scrolled ? 'shadow-violet-500/5' : 'shadow-black/50'}`}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 pt-6 px-6 ${scrolled || showVerificationBanner ? 'pt-4' : 'pt-6'}`}>
+        <div className={`max-w-7xl mx-auto glass rounded-[2rem] px-8 h-20 flex items-center justify-between shadow-2xl transition-all duration-500 border-white/10 ${scrolled ? 'shadow-violet-500/5' : 'shadow-black/50'} ${showVerificationBanner ? 'mt-12' : ''}`}>
           <Link to="/" className="flex items-center gap-3 group" onClick={() => setIsMenuOpen(false)}>
             <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-600/20 group-hover:scale-110 transition-transform duration-500">
               <Logo className="w-6 h-6 text-white" />

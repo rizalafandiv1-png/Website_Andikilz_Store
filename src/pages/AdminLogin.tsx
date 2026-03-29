@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { Lock, ArrowRight, AlertCircle } from "lucide-react";
+import { Lock, ArrowRight, AlertCircle, Mail } from "lucide-react";
 import { Button } from "../components/ui/Button";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase";
 
 export default function AdminLogin() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,48 +19,39 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      // Test health check first
-      try {
-        const healthCheck = await fetch("/api/health");
-        if (!healthCheck.ok) {
-          console.warn("Health check failed");
-          // Don't set error yet, let login attempt proceed
-        }
-      } catch (hErr) {
-        console.error("Health check network error:", hErr);
-        setError("Koneksi ke server gagal (Health Check)");
-        setLoading(false);
-        return;
-      }
+      // 1. Login with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // 2. Get ID Token
+      const idToken = await user.getIdToken();
 
-      const response = await fetch("/api/admin/login", {
+      // 3. Verify Admin Status on Server
+      const response = await fetch("/api/admin/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
       });
 
-      console.log("Login response status:", response.status);
-      
-      let data;
-      const responseText = await response.text();
-      try {
-        data = JSON.parse(responseText);
-      } catch (jsonErr) {
-        console.error("Failed to parse JSON response:", responseText);
-        throw new Error("Server returned non-JSON response");
-      }
+      const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem("adminToken", data.token);
+        localStorage.setItem("adminToken", idToken);
         navigate("/admin");
       } else {
-        setError(data.error || "Login gagal");
+        setError(data.error || "Anda tidak memiliki akses admin.");
+        // Sign out if not admin
+        await auth.signOut();
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message === "Server returned non-JSON response" 
-        ? "Kesalahan server (500)" 
-        : "Terjadi kesalahan koneksi");
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        setError("Email atau password salah.");
+      } else {
+        setError("Terjadi kesalahan saat login. Silakan coba lagi.");
+      }
     } finally {
       setLoading(false);
     }
@@ -75,22 +69,42 @@ export default function AdminLogin() {
             <Lock className="w-8 h-8 text-violet-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Admin Login</h1>
-          <p className="text-zinc-500 text-sm mt-2">Masukkan password untuk mengakses dashboard admin.</p>
+          <p className="text-zinc-500 text-sm mt-2">Masuk dengan akun admin Anda.</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">
-              Admin Password
+              Email Admin
             </label>
-            <input
-              type="password"
-              required
-              className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+              <input
+                type="email"
+                required
+                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2 ml-1">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+              <input
+                type="password"
+                required
+                className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
           {error && (

@@ -6,6 +6,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import admin from 'firebase-admin';
 // @ts-ignore
 import midtransClient from 'midtrans-client';
 
@@ -66,7 +67,42 @@ if (firebaseConfigJson) {
   db = initializeFirestore(firebaseApp, {
     experimentalForceLongPolling: true,
   }, firebaseConfigJson.firestoreDatabaseId);
+
+  // Initialize Firebase Admin
+  try {
+    admin.initializeApp({
+      projectId: firebaseConfigJson.projectId,
+    });
+    console.log("Firebase Admin initialized successfully.");
+  } catch (adminErr) {
+    console.error("Failed to initialize Firebase Admin:", adminErr);
+  }
 }
+
+// Admin Emails
+const ADMIN_EMAILS = ["rizalafandiv1@gmail.com"];
+
+// Admin Authentication Middleware
+const authenticateAdmin = async (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: No token provided" });
+  }
+
+  const idToken = authHeader.split("Bearer ")[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    if (ADMIN_EMAILS.includes(decodedToken.email || "")) {
+      req.admin = decodedToken;
+      next();
+    } else {
+      res.status(403).json({ error: "Forbidden: Not an admin" });
+    }
+  } catch (error) {
+    console.error("Error verifying ID token:", error);
+    res.status(401).json({ error: "Unauthorized: Invalid token" });
+  }
+};
 
 // Initialize Midtrans
 let snap: any;
@@ -258,7 +294,7 @@ app.get("/api/admin/products", async (req, res) => {
   }
 });
 
-app.post("/api/admin/products", async (req, res) => {
+app.post("/api/admin/products", authenticateAdmin, async (req, res) => {
   const { id, name, description, icon, type } = req.body;
   try {
     await setDoc(doc(db, "products", id), { id, name, description, icon, type });
@@ -268,7 +304,7 @@ app.post("/api/admin/products", async (req, res) => {
   }
 });
 
-app.patch("/api/admin/products/:id", async (req, res) => {
+app.patch("/api/admin/products/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, description, icon, type } = req.body;
   try {
@@ -279,7 +315,7 @@ app.patch("/api/admin/products/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/admin/products/:id", async (req, res) => {
+app.delete("/api/admin/products/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     // Delete associated categories first
@@ -298,7 +334,7 @@ app.delete("/api/admin/products/:id", async (req, res) => {
 });
 
 // Categories Management
-app.post("/api/admin/categories", async (req, res) => {
+app.post("/api/admin/categories", authenticateAdmin, async (req, res) => {
   const { id, product_id, name, description, price, features, popular } = req.body;
   try {
     await setDoc(doc(db, "categories", id), { id, product_id, name, description, price, features, popular: !!popular });
@@ -308,7 +344,7 @@ app.post("/api/admin/categories", async (req, res) => {
   }
 });
 
-app.patch("/api/admin/categories/:id", async (req, res) => {
+app.patch("/api/admin/categories/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, description, price, features, popular } = req.body;
   try {
@@ -319,7 +355,7 @@ app.patch("/api/admin/categories/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/admin/categories/:id", async (req, res) => {
+app.delete("/api/admin/categories/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await deleteDoc(doc(db, "categories", id));
@@ -379,7 +415,7 @@ app.get("/api/public/recent-orders", async (req, res) => {
 });
 
 // Social Proofs Management (Admin)
-app.get("/api/admin/social-proofs", async (req, res) => {
+app.get("/api/admin/social-proofs", authenticateAdmin, async (req, res) => {
   try {
     const proofsSnap = await getDocs(query(collection(db, "social_proofs"), orderBy("timestamp", "desc")));
     res.json(proofsSnap.docs.map(doc => doc.data()));
@@ -388,7 +424,7 @@ app.get("/api/admin/social-proofs", async (req, res) => {
   }
 });
 
-app.post("/api/admin/social-proofs", async (req, res) => {
+app.post("/api/admin/social-proofs", authenticateAdmin, async (req, res) => {
   const { id, name, location, product_name, category_name, timestamp } = req.body;
   try {
     await setDoc(doc(db, "social_proofs", id), { id, name, location, product_name, category_name, timestamp });
@@ -398,7 +434,7 @@ app.post("/api/admin/social-proofs", async (req, res) => {
   }
 });
 
-app.delete("/api/admin/social-proofs/:id", async (req, res) => {
+app.delete("/api/admin/social-proofs/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await deleteDoc(doc(db, "social_proofs", id));
@@ -409,33 +445,12 @@ app.delete("/api/admin/social-proofs/:id", async (req, res) => {
 });
 
 // Admin Login
-app.get("/api/admin/login", (req, res) => {
-  res.json({ message: "Admin login endpoint is reachable via GET" });
-});
-
-app.post("/api/admin/login", (req, res) => {
-  const { password } = req.body;
-  const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-  
-  console.log("Login request received:", { 
-    hasBody: !!req.body, 
-    bodyKeys: Object.keys(req.body || {}),
-    contentType: req.headers["content-type"],
-    passwordReceived: !!password,
-    passwordLength: password?.length || 0
-  });
-  
-  if (password === adminPassword) {
-    console.log("Login successful");
-    res.json({ success: true, token: "admin-session-token-" + Date.now() });
-  } else {
-    console.log("Login failed: Incorrect password");
-    res.status(401).json({ error: "Password salah" });
-  }
+app.post("/api/admin/verify", authenticateAdmin, (req: any, res) => {
+  res.json({ success: true, admin: req.admin });
 });
 
 // Get all orders (Admin)
-app.get("/api/orders", async (req, res) => {
+app.get("/api/orders", authenticateAdmin, async (req, res) => {
   try {
     const ordersSnap = await getDocs(query(collection(db, "orders"), orderBy("date", "desc")));
     res.json(ordersSnap.docs.map(doc => doc.data()));
@@ -493,7 +508,7 @@ app.post("/api/orders", async (req, res) => {
 });
 
 // Update order status
-app.patch("/api/orders/:id", async (req, res) => {
+app.patch("/api/orders/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
@@ -505,7 +520,7 @@ app.patch("/api/orders/:id", async (req, res) => {
 });
 
 // Delete an order
-app.delete("/api/orders/:id", async (req, res) => {
+app.delete("/api/orders/:id", authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await deleteDoc(doc(db, "orders", id));
