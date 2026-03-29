@@ -71,6 +71,14 @@ export default function AdminDashboard() {
 
   const adminToken = localStorage.getItem("adminToken");
 
+  useEffect(() => {
+    // Proactively clear malformed tokens (e.g. from old session system)
+    if (adminToken && adminToken.split('.').length !== 3) {
+      console.warn("Malformed admin token detected, clearing...");
+      handleLogout();
+    }
+  }, [adminToken]);
+
   const fetchData = async () => {
     if (!adminToken) return;
     setLoading(true);

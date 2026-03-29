@@ -89,7 +89,14 @@ const authenticateAdmin = async (req: any, res: any, next: any) => {
     return res.status(401).json({ error: "Unauthorized: No token provided" });
   }
 
-  const idToken = authHeader.split("Bearer ")[1];
+  const idToken = authHeader.replace("Bearer ", "").trim();
+  
+  // Basic JWT format check to avoid noisy errors from firebase-admin
+  if (!idToken || idToken.split('.').length !== 3) {
+    console.warn("Malformed token received:", idToken.substring(0, 20) + "...");
+    return res.status(401).json({ error: "Unauthorized: Invalid token format" });
+  }
+
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     if (ADMIN_EMAILS.includes(decodedToken.email || "")) {
@@ -98,8 +105,9 @@ const authenticateAdmin = async (req: any, res: any, next: any) => {
     } else {
       res.status(403).json({ error: "Forbidden: Not an admin" });
     }
-  } catch (error) {
-    console.error("Error verifying ID token:", error);
+  } catch (error: any) {
+    // Only log actual verification failures, not malformed tokens (handled above)
+    console.error("Error verifying ID token:", error.message);
     res.status(401).json({ error: "Unauthorized: Invalid token" });
   }
 };
