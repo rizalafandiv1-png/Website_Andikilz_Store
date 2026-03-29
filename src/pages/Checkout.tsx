@@ -2,14 +2,57 @@ import { useState, useEffect } from "react";
 import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Button } from "../components/ui/Button";
-import { QrCode, CreditCard, Loader2 } from "lucide-react";
+import { 
+  QrCode, 
+  CreditCard, 
+  Loader2, 
+  ChevronLeft, 
+  ShieldCheck, 
+  Zap, 
+  Lock,
+  ShoppingCart,
+  CheckCircle2,
+  Package,
+  MonitorPlay,
+  Palette,
+  Bot,
+  Gamepad2,
+  Flame,
+  Smartphone,
+  Tv,
+  Music
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+
+// Helper to map icon names to components
+const getIcon = (iconName: string, className: string) => {
+  switch (iconName) {
+    case "MonitorPlay": return <MonitorPlay className={className} />;
+    case "Palette": return <Palette className={className} />;
+    case "Bot": return <Bot className={className} />;
+    case "Gamepad2": return <Gamepad2 className={className} />;
+    case "Flame": return <Flame className={className} />;
+    case "Smartphone": return <Smartphone className={className} />;
+    case "Tv": return <Tv className={className} />;
+    case "Music": return <Music className={className} />;
+    case "ShieldCheck": return <ShieldCheck className={className} />;
+    default: return <Package className={className} />;
+  }
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(price);
+};
 
 export default function Checkout() {
   const { productId, categoryId } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>("qris");
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [creatingOrder, setCreatingOrder] = useState(false);
@@ -34,9 +77,12 @@ export default function Checkout() {
 
   if (loading || authLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-zinc-500">Menyiapkan checkout...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050505]">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 border-4 border-violet-500/20 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-6 text-zinc-500 font-medium tracking-widest uppercase text-xs">Menyiapkan Checkout...</p>
       </div>
     );
   }
@@ -135,95 +181,150 @@ export default function Checkout() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-24">
-      <div className="mb-8">
-        <Link to={`/products/${product.id}/${category.id}`} className="text-sm text-zinc-500 hover:text-white transition-colors mb-4 inline-block">
-          &larr; Kembali ke {category.name}
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Checkout</h1>
-        <p className="text-zinc-400">Pilih metode pembayaran yang Anda inginkan.</p>
-      </div>
-
-      <div className="grid md:grid-cols-5 gap-8">
-        <div className="md:col-span-3 space-y-6">
-          <h2 className="text-xl font-semibold mb-4">Metode Pembayaran</h2>
-          
-          <div className="space-y-4">
-            <button
-              onClick={() => setSelectedMethod("qris")}
-              className={`w-full flex items-center justify-between p-5 rounded-2xl border transition-all ${
-                selectedMethod === "qris" 
-                  ? "bg-violet-500/10 border-violet-500/50" 
-                  : "bg-[#0a0a0a] border-white/10 hover:border-white/20"
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-xl ${selectedMethod === "qris" ? "bg-violet-500/20 text-violet-400" : "bg-zinc-900 text-zinc-400"}`}>
-                  <QrCode className="w-6 h-6" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold text-lg">QRIS</div>
-                  <div className="text-sm text-zinc-500">Pembayaran instan via E-Wallet/Bank</div>
-                </div>
-              </div>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                selectedMethod === "qris" ? "border-violet-500" : "border-zinc-700"
-              }`}>
-                {selectedMethod === "qris" && <div className="w-3 h-3 rounded-full bg-violet-500" />}
-              </div>
-            </button>
-
-            <button
-              disabled
-              className="w-full flex items-center justify-between p-5 rounded-2xl border border-white/5 bg-[#0a0a0a] opacity-50 cursor-not-allowed"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-zinc-900 text-zinc-500">
-                  <CreditCard className="w-6 h-6" />
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold text-lg text-zinc-400">Kartu Kredit (Stripe)</div>
-                  <div className="text-sm text-zinc-600">Segera hadir</div>
-                </div>
-              </div>
-            </button>
-          </div>
+    <div className="min-h-screen bg-[#050505] pt-32 pb-24">
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Breadcrumbs */}
+        <div className="flex items-center gap-4 mb-12">
+          <Link to={`/products/${product.id}/${category.id}`} className="flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-white transition-colors group">
+            <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Kembali ke Detail Produk
+          </Link>
+          <div className="w-1 h-1 rounded-full bg-zinc-800" />
+          <span className="text-sm font-bold text-zinc-300">Checkout</span>
         </div>
 
-        <div className="md:col-span-2 space-y-6">
-          <div className="p-6 rounded-3xl bg-[#0a0a0a] border border-white/5 sticky top-24">
-            <h2 className="text-lg font-semibold mb-6">Ringkasan Pesanan</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* Left Column: Payment Methods */}
+          <div className="lg:col-span-7 space-y-10">
+            <div>
+              <h1 className="text-4xl font-black tracking-tight mb-4">Metode Pembayaran</h1>
+              <p className="text-zinc-400 font-light">Pilih metode pembayaran yang paling nyaman untuk Anda.</p>
+            </div>
             
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-medium text-zinc-200">{product.name}</div>
-                  <div className="text-sm text-zinc-500">{category.name}</div>
+            <div className="space-y-4">
+              <button
+                onClick={() => setSelectedMethod("qris")}
+                className={`w-full group relative flex items-center justify-between p-8 rounded-[2.5rem] border transition-all overflow-hidden ${
+                  selectedMethod === "qris" 
+                    ? "bg-violet-500/10 border-violet-500/50 shadow-2xl shadow-violet-500/10" 
+                    : "bg-zinc-900/20 border-white/5 hover:border-white/10"
+                }`}
+              >
+                <div className="relative z-10 flex items-center gap-6">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${
+                    selectedMethod === "qris" ? "bg-violet-500 text-white" : "bg-zinc-900 text-zinc-500"
+                  }`}>
+                    <QrCode className="w-8 h-8" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-black text-xl mb-1">QRIS</div>
+                    <div className="text-sm text-zinc-500 font-medium">Bayar instan via GoPay, OVO, Dana, LinkAja, atau Mobile Banking.</div>
+                  </div>
                 </div>
-                <span className="font-medium">Rp {category.price.toLocaleString('id-ID')}</span>
+                <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                  selectedMethod === "qris" ? "border-violet-500 bg-violet-500" : "border-zinc-800"
+                }`}>
+                  {selectedMethod === "qris" && <CheckCircle2 className="w-5 h-5 text-white" />}
+                </div>
+
+                {selectedMethod === "qris" && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 to-transparent" />
+                )}
+              </button>
+
+              <div className="w-full flex items-center justify-between p-8 rounded-[2.5rem] border border-white/5 bg-zinc-900/10 opacity-40 grayscale cursor-not-allowed">
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-900 text-zinc-700 flex items-center justify-center">
+                    <CreditCard className="w-8 h-8" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-black text-xl mb-1 text-zinc-600">Kartu Kredit / Debit</div>
+                    <div className="text-sm text-zinc-700 font-medium">Segera hadir sebagai opsi pembayaran tambahan.</div>
+                  </div>
+                </div>
+                <div className="px-3 py-1 rounded-full bg-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-600">
+                  Coming Soon
+                </div>
               </div>
             </div>
-            
-            <div className="pt-4 border-t border-white/5 flex justify-between items-center mb-8">
-              <span className="font-semibold text-zinc-400">Total</span>
-              <span className="text-2xl font-bold text-white">Rp {category.price.toLocaleString('id-ID')}</span>
-            </div>
 
-            <Button 
-              onClick={handleContinue}
-              disabled={!selectedMethod || creatingOrder}
-              size="lg" 
-              className="w-full rounded-xl h-14 text-base font-medium bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500"
-            >
-              {creatingOrder ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                "Lanjutkan ke Pembayaran"
-              )}
-            </Button>
+            {/* Security Info */}
+            <div className="p-8 rounded-[2.5rem] glass border-white/5 flex items-start gap-6">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div>
+                <h4 className="font-bold text-white mb-2">Keamanan Terjamin</h4>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  Semua transaksi diproses melalui gateway pembayaran resmi yang terenkripsi dan diawasi oleh Bank Indonesia. Data Anda aman bersama kami.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Order Summary */}
+          <div className="lg:col-span-5">
+            <div className="p-10 rounded-[3rem] glass border-white/10 sticky top-32 shadow-2xl shadow-black/50 overflow-hidden">
+              {/* Background Glow */}
+              <div className="absolute top-0 right-0 w-48 h-48 bg-violet-600/10 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2" />
+              
+              <h2 className="relative z-10 text-2xl font-black mb-10 flex items-center gap-3">
+                <ShoppingCart className="w-6 h-6 text-violet-400" />
+                Ringkasan Pesanan
+              </h2>
+              
+              <div className="relative z-10 space-y-8 mb-10">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center shrink-0">
+                    {getIcon(product.icon, "w-10 h-10 text-violet-400")}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-black text-white text-lg mb-1">{product.name}</div>
+                    <div className="text-sm font-bold text-violet-400 uppercase tracking-widest">{category.name}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-8 border-t border-white/5">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-500 font-medium">Harga Paket</span>
+                    <span className="text-white font-bold">{formatPrice(category.price)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-zinc-500 font-medium">Biaya Layanan</span>
+                    <span className="text-emerald-400 font-bold uppercase tracking-widest text-[10px]">Gratis</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="relative z-10 pt-8 border-t border-white/5 flex justify-between items-center mb-10">
+                <span className="font-black text-zinc-400 uppercase tracking-widest text-xs">Total Bayar</span>
+                <span className="text-4xl font-black text-white">{formatPrice(category.price)}</span>
+              </div>
+
+              <div className="relative z-10">
+                <Button 
+                  onClick={handleContinue}
+                  disabled={!selectedMethod || creatingOrder}
+                  size="lg" 
+                  className="w-full rounded-2xl h-20 text-xl font-black bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-900 disabled:text-zinc-700 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-white/5"
+                >
+                  {creatingOrder ? (
+                    <>
+                      <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                      Memproses...
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      Bayar Sekarang
+                      <Zap className="w-5 h-5 fill-current" />
+                    </div>
+                  )}
+                </Button>
+                <p className="mt-6 text-center text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                  <Lock className="w-3 h-3" /> Secure Checkout
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

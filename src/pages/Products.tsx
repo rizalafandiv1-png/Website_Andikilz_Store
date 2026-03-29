@@ -15,7 +15,11 @@ import {
   ShieldCheck,
   Search,
   Filter,
-  X
+  X,
+  Zap,
+  Star,
+  ChevronRight,
+  ShoppingCart
 } from "lucide-react";
 
 // Helper to map icon names to components
@@ -32,6 +36,14 @@ const getIcon = (iconName: string, className: string) => {
     case "ShieldCheck": return <ShieldCheck className={className} />;
     default: return <Package className={className} />;
   }
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(price);
 };
 
 export default function Products() {
@@ -84,49 +96,61 @@ export default function Products() {
   return (
     <div className="min-h-screen bg-[#050505] pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
-          <div className="max-w-2xl">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">Katalog Produk</h1>
-            <p className="text-xl text-zinc-400 font-light leading-relaxed">
-              Temukan berbagai layanan premium dengan harga terbaik. Semua akun bergaransi dan dikirim secara instan.
-            </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-violet-400 transition-colors" />
-              <input 
-                type="text"
-                placeholder="Cari produk..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-64 pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 focus:border-violet-500/50 focus:outline-none focus:ring-4 focus:ring-violet-500/10 transition-all text-sm"
-              />
+        {/* Hero Header */}
+        <div className="relative mb-16 p-12 rounded-[3rem] overflow-hidden border border-white/5 bg-zinc-900/20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="max-w-xl text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-[10px] font-bold tracking-widest uppercase text-violet-400 mb-6">
+                <Zap className="w-3 h-3 fill-current" /> Pengiriman Instan 24/7
+              </div>
+              <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
+                Katalog <span className="text-gradient">Layanan.</span>
+              </h1>
+              <p className="text-lg text-zinc-400 font-light leading-relaxed">
+                Pilih layanan premium favorit Anda. Semua transaksi aman, bergaransi, dan diproses secara otomatis oleh sistem kami.
+              </p>
+            </div>
+            
+            <div className="w-full md:w-80 space-y-4">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-violet-400 transition-colors" />
+                <input 
+                  type="text"
+                  placeholder="Cari produk..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 focus:border-violet-500/50 focus:outline-none focus:ring-4 focus:ring-violet-500/10 transition-all text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/5 text-xs text-zinc-500">
+                <Filter className="w-4 h-4" />
+                <span>{filteredProducts.length} Produk ditemukan</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-12">
+        {/* Categories Navigation */}
+        <div className="flex items-center gap-4 mb-12 overflow-x-auto pb-4 scrollbar-hide">
           <button
             onClick={() => setSelectedType(null)}
-            className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex-none px-8 py-3.5 rounded-2xl text-sm font-bold transition-all border ${
               selectedType === null 
-                ? "bg-white text-black shadow-xl shadow-white/10" 
-                : "bg-white/5 text-zinc-400 hover:bg-white/10 border border-white/5"
+                ? "bg-white text-black border-white shadow-xl shadow-white/10" 
+                : "bg-white/5 text-zinc-400 hover:bg-white/10 border-white/5"
             }`}
           >
-            Semua
+            Semua Layanan
           </button>
           {productTypes.map(type => (
             <button
               key={type}
               onClick={() => setSelectedType(type)}
-              className={`px-6 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${
+              className={`flex-none px-8 py-3.5 rounded-2xl text-sm font-bold capitalize transition-all border ${
                 selectedType === type 
-                  ? "bg-violet-600 text-white shadow-xl shadow-violet-600/20" 
-                  : "bg-white/5 text-zinc-400 hover:bg-white/10 border border-white/5"
+                  ? "bg-violet-600 text-white border-violet-500 shadow-xl shadow-violet-600/20" 
+                  : "bg-white/5 text-zinc-400 hover:bg-white/10 border-white/5"
               }`}
             >
               {type}
@@ -134,57 +158,69 @@ export default function Products() {
           ))}
         </div>
 
-        {/* Grid */}
+        {/* Products Grid */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence mode="popLayout">
-              {filteredProducts.map((product, i) => (
-                <motion.div
-                  layout
-                  key={product.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                >
-                  <Link 
-                    to={`/products/${product.id}`}
-                    className="group block h-full p-8 rounded-[2rem] glass border-white/5 hover:border-violet-500/30 hover:bg-zinc-900/40 transition-all relative overflow-hidden"
+              {filteredProducts.map((product, i) => {
+                const minPrice = Math.min(...product.categories.map((c: any) => c.price));
+                const hasPopular = product.categories.some((c: any) => c.popular);
+                
+                return (
+                  <motion.div
+                    layout
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4, delay: i * 0.05 }}
                   >
-                    {/* Hover Glow */}
-                    <div className="absolute -inset-px bg-gradient-to-br from-violet-500/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-8">
-                        <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:scale-110 group-hover:border-violet-500/20 transition-all duration-500">
+                    <Link 
+                      to={`/products/${product.id}`}
+                      className="group block h-full p-6 rounded-[2.5rem] glass border-white/5 hover:border-violet-500/30 hover:bg-zinc-900/40 transition-all relative overflow-hidden flex flex-col"
+                    >
+                      {/* Popular Badge */}
+                      {hasPopular && (
+                        <div className="absolute top-6 right-6 z-20">
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-black uppercase tracking-tighter text-amber-500">
+                            <Star className="w-3 h-3 fill-current" /> Popular
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Card Content */}
+                      <div className="relative z-10 flex-1">
+                        <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-violet-500/20 transition-all duration-500">
                           {getIcon(product.icon, "w-8 h-8 text-zinc-400 group-hover:text-violet-400 transition-colors")}
                         </div>
-                        <div className="p-2 rounded-full bg-white/5 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                          <ArrowRight className="w-5 h-5 text-violet-400" />
+                        
+                        <h2 className="text-xl font-bold mb-2 group-hover:text-white transition-colors">{product.name}</h2>
+                        <p className="text-zinc-500 leading-relaxed mb-6 line-clamp-2 text-xs font-medium">
+                          {product.description}
+                        </p>
+                      </div>
+
+                      {/* Footer Info */}
+                      <div className="relative z-10 pt-6 border-t border-white/5 mt-auto">
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Mulai Dari</p>
+                            <p className="text-xl font-black text-white group-hover:text-violet-400 transition-colors">
+                              {formatPrice(minPrice)}
+                            </p>
+                          </div>
+                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-violet-600 transition-all duration-500">
+                            <ShoppingCart className="w-5 h-5 text-zinc-400 group-hover:text-white" />
+                          </div>
                         </div>
                       </div>
-                      
-                      <h2 className="text-2xl font-bold mb-3 group-hover:text-white transition-colors">{product.name}</h2>
-                      <p className="text-zinc-400 leading-relaxed mb-8 line-clamp-2 text-sm font-light">
-                        {product.description}
-                      </p>
-                      
-                      <div className="flex flex-wrap gap-2 pt-6 border-t border-white/5">
-                        {product.categories.slice(0, 3).map(cat => (
-                          <span key={cat.id} className="px-3 py-1 rounded-lg bg-white/5 text-[10px] uppercase tracking-wider font-bold text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                            {cat.name}
-                          </span>
-                        ))}
-                        {product.categories.length > 3 && (
-                          <span className="px-3 py-1 rounded-lg bg-white/5 text-[10px] uppercase tracking-wider font-bold text-zinc-500">
-                            +{product.categories.length - 3} More
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+
+                      {/* Hover Glow Effect */}
+                      <div className="absolute -inset-px bg-gradient-to-br from-violet-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         ) : (
@@ -200,12 +236,31 @@ export default function Products() {
             <p className="text-zinc-500">Coba kata kunci lain atau hapus filter.</p>
             <button 
               onClick={() => { setSearchQuery(""); setSelectedType(null); }}
-              className="mt-8 text-violet-400 font-bold hover:underline"
+              className="mt-8 px-8 py-3 rounded-2xl bg-white/5 text-violet-400 font-bold hover:bg-white/10 transition-all"
             >
               Reset Pencarian
             </button>
           </motion.div>
         )}
+
+        {/* Trust Footer */}
+        <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { icon: ShieldCheck, title: "Transaksi Aman", desc: "Enkripsi SSL & Gateway Pembayaran Terpercaya" },
+            { icon: Zap, title: "Proses Otomatis", desc: "Pesanan diproses instan oleh sistem kami" },
+            { icon: Star, title: "Layanan Terbaik", desc: "Kualitas premium dengan harga kompetitif" }
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-6 p-8 rounded-[2rem] bg-white/5 border border-white/5">
+              <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                <item.icon className="w-6 h-6 text-violet-400" />
+              </div>
+              <div>
+                <h4 className="font-bold text-white mb-1">{item.title}</h4>
+                <p className="text-xs text-zinc-500">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
